@@ -86,8 +86,14 @@
     onMount(() => {
         initPromise = init();
 
-        const unlisten = getCurrentWindow().onCloseRequested(async (_) => {
+        const appWindow = getCurrentWindow();
+        const unlisten = appWindow.onCloseRequested(async (event) => {
+            // Take control of the close so saving completes, then close the
+            // window explicitly. Without the explicit destroy the window does
+            // not actually close (reproduced on this page in upstream too).
+            event.preventDefault();
             await doSaveProfiles();
+            await appWindow.destroy();
         });
 
         return () => {
