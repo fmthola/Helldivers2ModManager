@@ -132,6 +132,16 @@
         profiles = loadedConfig.Profiles;
         activeProfile = loadedConfig.Active;
 
+        // If mods exist that aren't in the active profile, they live in the
+        // library. Open it on startup so they're visible instead of looking
+        // like the app loaded with nothing.
+        const activeConfigs = loadedConfig.Profiles[loadedConfig.Active]?.Configs ?? [];
+        const hasLibraryMods = loadedMods.some(m => !activeConfigs.some(c => c.Guid === m.guid));
+        if (hasLibraryMods) {
+            libraryExtended = true;
+            libraryVisible = true;
+        }
+
         log.info("Initialization complete.");
     }
 
