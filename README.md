@@ -57,16 +57,18 @@ run it; the distrobox is only for building.
 
 ### 1. Get the app
 
-Download `HD2ModManager.AppImage` from the
-[latest release](https://github.com/fmthola/Helldivers2ModManager/releases/latest).
+Download it from the
+[latest release](https://github.com/fmthola/Helldivers2ModManager/releases/latest),
+or fetch and run it directly:
 
 ```bash
-chmod +x ~/Downloads/HD2ModManager.AppImage
-~/Downloads/HD2ModManager.AppImage
+wget https://github.com/fmthola/Helldivers2ModManager/releases/latest/download/HD2ModManager.AppImage
+chmod +x HD2ModManager.AppImage
+./HD2ModManager.AppImage
 ```
 
 If it does not start by double-click (no FUSE), run:
-`APPIMAGE_EXTRACT_AND_RUN=1 ~/Downloads/HD2ModManager.AppImage`.
+`APPIMAGE_EXTRACT_AND_RUN=1 ./HD2ModManager.AppImage`.
 
 To add it to your app menu, run the app once, then from a clone of this repo:
 `scripts/install.sh` (copies it to `~/.local/bin` and adds a "Helldivers 2 Mod
