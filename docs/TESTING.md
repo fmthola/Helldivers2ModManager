@@ -69,32 +69,39 @@ Evidence: `docs/evidence/e2e-tests.txt`, `docs/evidence/e2e-app-window.png`.
 
 ## 4. SonarQube loop
 
-Server: self-hosted SonarQube Community. `http://localhost:9000`.
+Self-hosted SonarQube Community. Run locally. No CI service.
 
-Config: `sonar-project.properties`. Key `helldivers2modmanager-linux`.
+The server URL and analysis token are read from the local credential store
+(KWallet). They are not stored in the repo. Config: `sonar-project.properties`,
+key `helldivers2modmanager-linux`.
+
+Scan and check the gate:
+
+```bash
+scripts/sonar.sh
+```
+
+It generates Rust coverage, runs the scanner, and reports the gate. Exit `0`
+pass, non-zero fail.
 
 The loop:
 
-1. Scan. `~/sonarqube/scan.sh .`
-2. Report. `~/sonarqube/report.sh helldivers2modmanager-linux`
-3. Validate. `~/sonarqube/validate.sh helldivers2modmanager-linux`
-4. Fix the issues.
+1. Develop a change.
+2. `scripts/sonar.sh`.
+3. Read the gate and the open issues.
+4. Fix issues.
 5. Re-scan.
 6. Repeat until the gate passes.
 
-`validate.sh` exit codes: `0` pass, `1` fail, `2` error.
-
-Screenshots come from the SonarQube web UI itself. Capture them with:
+Screenshots come from the SonarQube web UI itself:
 
 ```bash
-SONAR_ADMIN_PASSWORD=... node scripts/capture-sonar-evidence.mjs
+scripts/sonar-evidence.sh
 ```
 
 - `docs/evidence/sonar-dashboard.png` — quality gate + ratings.
 - `docs/evidence/sonar-issues.png` — open issues.
 - `docs/evidence/sonar-measures.png` — measures.
-
-Last run. Gate passed. Bugs 0. Vulnerabilities 0. Ratings A/A/A.
 
 The loop in action (this fork):
 
@@ -107,9 +114,14 @@ The loop in action (this fork):
 
 Fixed: 7 CSS font fallbacks, 2 nullish-coalescing bugs, 1 stringify smell.
 
-Still open: 16 smells. All pre-existing. 4 are cognitive-complexity refactors (`deploy`, `add_mods`, `normalize_paths`, `validate`). Tracked. Not blocking.
+Still open: pre-existing smells, not yet acted on. 4 are cognitive-complexity
+refactors (`deploy`, `add_mods`, `normalize_paths`, `validate`). Shown in
+`docs/evidence/sonar-issues.png`. Tracked. Not blocking.
 
-Evidence: `docs/evidence/sonar-report.txt`.
+That table was the violation-fixing loop. Coverage was then added and is reported
+to SonarQube. It is low (10.2% overall), so the gate is now red on new-code
+coverage (59.8% < 80%). Raising coverage is open work. Security and reliability
+stay clean.
 
 ## Evidence
 
@@ -131,7 +143,9 @@ Re-generate them by re-running each layer above.
 ## Run everything
 
 ```bash
-pnpm test            # rust + e2e
-pnpm run build:checked
-~/sonarqube/scan.sh . && ~/sonarqube/validate.sh helldivers2modmanager-linux
+scripts/build.sh         # build
+pnpm test                # rust + e2e
+pnpm run build:checked    # i18n + frontend check
+scripts/sonar.sh         # coverage + scan + gate
+scripts/sonar-evidence.sh # capture UI screenshots
 ```

@@ -13,29 +13,42 @@ validation rather than a rewrite.
 
 ## Code status
 
-Last full run: 2026-06-19. Produced by the suite in [`docs/TESTING.md`](docs/TESTING.md).
-Raw artifacts: [`docs/evidence/`](docs/evidence/).
+Last full run: 2026-06-19. Produced by the local suite in [`docs/TESTING.md`](docs/TESTING.md).
+Raw artifacts: [`docs/evidence/`](docs/evidence/). Numbers are read from the run, not asserted.
 
 | Check | Result |
 | --- | --- |
-| SonarQube quality gate | ✅ Passed |
+| SonarQube quality gate | ❌ Failed — on coverage (see below) |
 | Vulnerabilities | 0 |
 | Security rating | A |
 | Security hotspots | 0 |
 | Bugs | 0 |
 | Reliability rating | A |
 | Maintainability rating | A |
+| Code smells (open, not yet fixed) | 16 |
+| Coverage (overall) | 10.2% |
+| Coverage (new code) | 59.8% (gate needs ≥ 80%) |
 | Rust unit tests | 11 / 11 pass |
 | Frontend build | ✅ Clean |
 | App launches (E2E) | ✅ |
+
+The gate is **red on purpose**, not hidden. It fails one condition: coverage on new
+code (59.8%) is below the required 80%. Security and reliability are clean (0
+vulnerabilities, 0 bugs, A ratings). Raising coverage is open work — see
+[Validation and DevSecOps](#validation-and-devsecops).
 
 ### SonarQube dashboard
 
 Captured from the running SonarQube server, not a badge.
 
-![SonarQube dashboard showing quality gate passed, 0 bugs, 0 vulnerabilities, security A](docs/evidence/sonar-dashboard.png)
+![SonarQube dashboard: quality gate Failed on coverage, 0 bugs, 0 vulnerabilities, security A](docs/evidence/sonar-dashboard.png)
 
-More: [open issues](docs/evidence/sonar-issues.png) · [measures](docs/evidence/sonar-measures.png) · [running app window](docs/evidence/e2e-app-window.png).
+Open findings, not yet acted on (e.g. "Refactor this function to reduce its Cognitive
+Complexity from 81 to the 15 allowed"):
+
+![SonarQube open issues, sorted by severity](docs/evidence/sonar-issues.png)
+
+More: [measures](docs/evidence/sonar-measures.png) · [running app window](docs/evidence/e2e-app-window.png).
 
 ## Status
 
@@ -147,30 +160,78 @@ Then add mods and **Deploy**.
 **2026-06-19 — initial bring-up.** Rust unit tests: 11 passing. Frontend build:
 clean. App E2E: launched via `tauri-driver`, UI rendered, screenshot captured.
 Steam auto-detection: confirmed (path pre-filled in the screenshot). SonarQube:
-quality gate pass, 0 bugs, 0 vulnerabilities, ratings A/A/A. Artifacts in
-[`docs/evidence/`](docs/evidence/). Open: frontend game-path validation error
-(see Known issue above); mod deploy/purge not yet exercised with a real mod.
+0 bugs, 0 vulnerabilities, ratings A/A/A; coverage added (10.2% overall), so the
+gate now fails on new-code coverage (59.8% < 80%). Artifacts in
+[`docs/evidence/`](docs/evidence/). Open: low coverage; 4 cognitive-complexity
+smells; frontend game-path validation error (see Known issue above); mod
+deploy/purge not yet exercised with a real mod.
 
-## Security and validation
+## Validation and DevSecOps
 
-A path-traversal (zip-slip) flaw in 7z/RAR extraction was fixed in this fork. A
-crafted archive could write outside the mod directory. See commit `fix: prevent
-path traversal (zip-slip) in 7z/RAR extraction`. Further hardening (CSP, manifest
-asset paths) is tracked for future work.
+Development is local. There is no CI service. The pipeline is plain shell scripts.
+Secrets and the SonarQube URL are read from the local credential store (KWallet)
+at run time and are never stored in the repo.
 
-The code is validated on a recurring basis, not once. Each change runs through the
-loop in [`docs/TESTING.md`](docs/TESTING.md):
+The four stages, and how each one keeps the code valid and secure:
 
-- **Static analysis.** Self-hosted SonarQube scans the code. The quality gate
-  covers bugs, vulnerabilities, and security rating. Issues are fixed and the scan
-  repeats until the gate passes. Screenshot from the SonarQube UI:
-  [`docs/evidence/sonar-dashboard.png`](docs/evidence/sonar-dashboard.png).
-- **Runtime evidence.** The packaged app is launched through WebDriver
-  (`tauri-driver`). A screenshot is captured each run:
-  [`docs/evidence/e2e-app-window.png`](docs/evidence/e2e-app-window.png).
+### Build
 
-The loop re-runs on every change. Current numbers are in [Code status](#code-status),
-sourced from `docs/evidence/`.
+```bash
+scripts/build.sh
+```
+
+Installs deps, builds the frontend, compiles the Tauri release binary, and
+produces the AppImage and `.deb`.
+
+### Test
+
+```bash
+pnpm test                 # Rust unit tests + app E2E
+pnpm run build:checked     # i18n + frontend type/compile check
+```
+
+- **Rust unit tests** cover the security-relevant logic: the archive
+  path-traversal guard, install validation, and patch-file matching.
+- **App E2E** drives the real packaged binary through `tauri-driver` +
+  `WebKitWebDriver` and screenshots it. This is not Playwright; Playwright
+  cannot drive a Tauri window.
+
+### Scan
+
+```bash
+scripts/sonar.sh          # coverage + SonarQube scan + quality-gate check
+scripts/sonar-evidence.sh  # capture the SonarQube UI screenshots
+```
+
+Self-hosted SonarQube analyses the code for bugs, vulnerabilities, security
+hotspots, and code smells, and imports test **coverage**. The quality gate is the
+go/no-go signal. The loop is: scan → read the gate and issues → fix → re-scan,
+until it is green.
+
+**Why coverage matters here.** Static analysis only flags what it can see. Coverage
+shows how much of the code the tests actually exercise. Low coverage means large
+parts of the code are unproven, so "0 bugs found" is weaker than it looks. That is
+why the gate includes a coverage condition, and why the gate is currently red: new-code
+coverage is 59.8%, below the 80% the gate requires. Security and reliability are
+clean; coverage is the open gap.
+
+### Deploy
+
+Release artifacts (AppImage, `.deb`) are built by `scripts/build.sh`. They are held
+back from distribution until end-to-end mod testing on a real install passes (see
+[Validation Reports](#validation-reports)).
+
+### Security fixes and open findings
+
+- **Fixed:** a path-traversal (zip-slip) flaw in 7z/RAR extraction. A crafted
+  archive could write outside the mod directory. See commit `fix: prevent path
+  traversal (zip-slip) in 7z/RAR extraction`, covered by unit tests.
+- **Open, not yet acted on** (visible in [`docs/evidence/sonar-issues.png`](docs/evidence/sonar-issues.png)):
+  4 cognitive-complexity refactors (`deploy`, `add_mods`, `normalize_paths`,
+  `validate`), other minor smells, and low coverage. Further hardening (CSP,
+  manifest asset path validation) is also tracked.
+
+Current numbers are in [Code status](#code-status), sourced from `docs/evidence/`.
 
 > ⚠️ Modding online games can carry risk with anti-cheat. Use at your own
 > discretion and purge mods before playing if unsure.
