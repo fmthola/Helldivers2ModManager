@@ -4,7 +4,7 @@
     import { beforeNavigate, onNavigate } from "$app/navigation";
     import { toSkipEntry, type SkipEntry } from "$lib/models/settings";
     import { useLocalization } from "$lib/state/localization.svelte";
-    import { loadSettings, saveSettings } from "$lib/utils/commands";
+    import { detectGamePath, loadSettings, saveSettings } from "$lib/utils/commands";
     import { Dash, Plus, ThreeDots } from "svelte-bootstrap-icons";
     import { usePopup } from "$lib/state/popup.svelte";
     import { InputPopup, NotificationPopup } from "$lib/types/popup";
@@ -86,6 +86,17 @@
                 gamePath = settings.GamePath;
                 skipList = settings.SkipList;
                 break;
+        }
+
+        // On a fresh setup with no saved path, try to auto-detect the
+        // Helldivers 2 install from the local Steam libraries.
+        if (!gamePath || gamePath.length === 0) {
+            try {
+                const detected = await detectGamePath();
+                if (detected) gamePath = detected;
+            } catch {
+                // detection is best-effort; ignore failures
+            }
         }
     }
 

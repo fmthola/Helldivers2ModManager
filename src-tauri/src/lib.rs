@@ -67,6 +67,7 @@ pub fn run() {
             commands::settings::load_settings,
             commands::settings::save_settings,
             commands::settings::check_settings,
+            commands::settings::detect_game_path,
             commands::purge,
             commands::deploy
         ])

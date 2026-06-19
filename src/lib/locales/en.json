@@ -160,7 +160,7 @@
             },
             "game_path": {
                 "title": "Game Path",
-                "placeholder": "eg. Steam/steamapps/common/Helldivers 2/",
+                "placeholder": "eg. ~/.local/share/Steam/steamapps/common/Helldivers 2",
                 "browse_button": {
                     "tip": "Browse..."
                 }

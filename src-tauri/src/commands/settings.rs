@@ -1,11 +1,64 @@
 use std::path::{Path, PathBuf};
 
 use anyhow_tauri::{IntoTAResult, TAResult};
+use regex::Regex;
 use tauri::State;
 
 use crate::{AppState, models::settings::Settings};
 
 const SETTINGS_FILE: &'static str = "settings.json";
+
+/// Try to locate the Helldivers 2 install directory on Linux by scanning the
+/// usual Steam library locations (native, Flatpak, and any extra libraries
+/// registered in `libraryfolders.vdf`, e.g. a second drive or SD card).
+fn do_detect_game_path() -> Option<PathBuf> {
+    let home = PathBuf::from(std::env::var("HOME").ok()?);
+
+    // Candidate Steam roots, including Flatpak Steam which is common on Bazzite.
+    let steam_roots = [
+        home.join(".local/share/Steam"),
+        home.join(".steam/steam"),
+        home.join(".steam/root"),
+        home.join(".var/app/com.valvesoftware.Steam/.local/share/Steam"),
+    ];
+
+    let path_regex = Regex::new(r#""path"\s*"([^"]+)""#).ok()?;
+
+    // Build the full set of library roots: each Steam root plus every library
+    // path it lists in libraryfolders.vdf.
+    let mut libraries: Vec<PathBuf> = Vec::new();
+    for root in steam_roots.iter() {
+        if !root.is_dir() {
+            continue;
+        }
+        libraries.push(root.clone());
+
+        let vdf = root.join("steamapps/libraryfolders.vdf");
+        if let Ok(contents) = std::fs::read_to_string(&vdf) {
+            for cap in path_regex.captures_iter(&contents) {
+                libraries.push(PathBuf::from(cap[1].replace("\\\\", "/")));
+            }
+        }
+    }
+
+    // Return the first library that actually contains the game.
+    for lib in libraries {
+        let candidate = lib.join("steamapps/common/Helldivers 2");
+        if candidate.join("data").is_dir() {
+            log::info!("Auto-detected game path: {:?}", &candidate);
+            return Some(candidate);
+        }
+    }
+
+    log::info!("Could not auto-detect game path.");
+    None
+}
+
+/// Returns the auto-detected Helldivers 2 install path, or `null` if not found.
+#[tauri::command]
+pub async fn detect_game_path() -> TAResult<Option<String>> {
+    Ok(do_detect_game_path().and_then(|p| p.to_str().map(String::from)))
+}
 
 pub async fn do_load_settings(base_path: &Path) -> anyhow::Result<Settings> {
     log::info!("Loading settings...");

@@ -53,6 +53,10 @@ export async function checkSettings(): Promise<boolean> {
     return await invoke<boolean>("check_settings");
 }
 
+export async function detectGamePath(): Promise<string | null> {
+    return await invoke<string | null>("detect_game_path");
+}
+
 export async function deploy(configs: Config[]): Promise<void> {
     await invoke<void>("deploy", { configs });
 }
