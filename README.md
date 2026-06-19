@@ -137,7 +137,8 @@ loop in [`docs/TESTING.md`](docs/TESTING.md):
 
 - **Static analysis.** Self-hosted SonarQube scans the code. The quality gate
   covers bugs, vulnerabilities, and security rating. Issues are fixed and the scan
-  repeats until the gate passes.
+  repeats until the gate passes. Screenshot from the SonarQube UI:
+  [`docs/evidence/sonar-dashboard.png`](docs/evidence/sonar-dashboard.png).
 - **Runtime evidence.** The packaged app is launched through WebDriver
   (`tauri-driver`). A screenshot is captured each run:
   [`docs/evidence/e2e-app-window.png`](docs/evidence/e2e-app-window.png).

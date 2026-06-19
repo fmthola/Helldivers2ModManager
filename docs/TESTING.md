@@ -84,6 +84,16 @@ The loop:
 
 `validate.sh` exit codes: `0` pass, `1` fail, `2` error.
 
+Screenshots come from the SonarQube web UI itself. Capture them with:
+
+```bash
+SONAR_ADMIN_PASSWORD=... node scripts/capture-sonar-evidence.mjs
+```
+
+- `docs/evidence/sonar-dashboard.png` — quality gate + ratings.
+- `docs/evidence/sonar-issues.png` — open issues.
+- `docs/evidence/sonar-measures.png` — measures.
+
 Last run. Gate passed. Bugs 0. Vulnerabilities 0. Ratings A/A/A.
 
 The loop in action (this fork):
@@ -111,7 +121,10 @@ All artifacts live in `docs/evidence/`.
 | `frontend-build.txt` | Frontend compiles. |
 | `e2e-tests.txt` | App launched via WebDriver. |
 | `e2e-app-window.png` | The running window. |
-| `sonar-report.txt` | Quality gate result. |
+| `sonar-report.txt` | Quality gate result (text). |
+| `sonar-dashboard.png` | Quality gate + ratings (SonarQube UI). |
+| `sonar-issues.png` | Open issues (SonarQube UI). |
+| `sonar-measures.png` | Measures (SonarQube UI). |
 
 Re-generate them by re-running each layer above.
 
