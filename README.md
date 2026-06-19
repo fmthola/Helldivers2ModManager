@@ -50,6 +50,66 @@ Complexity from 81 to the 15 allowed"):
 
 More: [measures](docs/evidence/sonar-measures.png) · [running app window](docs/evidence/e2e-app-window.png).
 
+## Quick start — install and apply a mod
+
+Runs natively on Linux (built and verified on Bazzite). No distrobox is needed to
+run it; the distrobox is only for building.
+
+### 1. Get the app
+
+Download `HD2ModManager.AppImage` from the
+[latest release](https://github.com/fmthola/Helldivers2ModManager/releases/latest).
+
+```bash
+chmod +x ~/Downloads/HD2ModManager.AppImage
+~/Downloads/HD2ModManager.AppImage
+```
+
+If it does not start by double-click (no FUSE), run:
+`APPIMAGE_EXTRACT_AND_RUN=1 ~/Downloads/HD2ModManager.AppImage`.
+
+To add it to your app menu, run the app once, then from a clone of this repo:
+`scripts/install.sh` (copies it to `~/.local/bin` and adds a "Helldivers 2 Mod
+Manager" launcher).
+
+### 2. Point it at the game (first run)
+
+Open **Settings** (gear, bottom-left). The **Game Path** is auto-detected from your
+Steam libraries (native and Flatpak). If it is empty, click **…** and browse to
+`…/steamapps/common/Helldivers 2`. There should be no red error.
+
+### 3. Add a mod
+
+Click **Add** (bottom-left), pick a mod archive (`.zip`, `.7z`, or `.rar`). It
+appears in the **Library** panel (which opens automatically).
+
+### 4. Put it in your profile
+
+In the Library, click the **insert** arrow (↵) on the mod to move it into your
+active profile (the left list).
+
+### 5. Choose options (if the mod has them)
+
+On the mod in the profile, click the **pencil** button. Pick the variant in the
+dropdown (e.g. Blue Glowing / Purple No-glow), then **OK**.
+
+### 6. Deploy
+
+Click **Deploy**. The selected variant's patch files are copied into
+`…/Helldivers 2/data/`. Then click **Launch** (or start the game from Steam).
+
+### 7. Remove mods (revert)
+
+Click **Purge** to remove all deployed mod files and return the game to vanilla.
+(`scripts/revert-mods.sh` does the same from the command line.)
+
+### Proof — a deployed mod running in-game on Bazzite
+
+The "Super Credit Arrows" mod (Blue Glowing) deployed with the steps above, shown
+in Helldivers 2 (the glowing blue arrow marks a Super Credit pile):
+
+![Super Credit Arrows mod running in Helldivers 2 on Bazzite](docs/evidence/in-game-bazzite.jpg)
+
 ## Status
 
 🚧 **Early / preview.** Based on the upstream `v2.0.0.0_preview3` tag. Builds and
