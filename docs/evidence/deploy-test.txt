@@ -1,0 +1,27 @@
+Deploy + purge round-trip — real game install. Date: 2026-06-19.
+Mod: Super Credit Arrows (SuperCreditArrows.zip), option "Blue Glowing".
+Driven by e2e/deploy.test.mjs.
+
+Safety: before any deploy, the game data dir had 61 files and 0 files matching
+the mod-manager patch pattern, and the mod's hash was absent. So deploy only
+adds files and purge only removes mod files; base game is never touched.
+Baseline snapshot: ~/.local/share/hd2mm-backups/data-baseline-*.txt
+Standalone revert: scripts/revert-mods.sh
+
+Round-trip result (patch files = 9ba626afa44a3aa3.patch_0 + .gpu_resources + .stream):
+  files_before        : [false, false, false]
+  deploy_result       : OK
+  files_after_deploy  : [true,  true,  true ]
+  purge_result        : OK
+  files_after_purge   : [false, false, false]
+
+Post-purge the data dir matched the baseline exactly (61 files, 0 patch files).
+
+Conclusions:
+  - Deploy copies the selected option's patch triplet into <game>/data/.
+  - Options work: the "Blue Glowing" sub-option was deployed (blue/glow).
+  - Purge is the revert: it removes exactly the deployed patch files and
+    restores the unmodded baseline. No base game files affected.
+  - UI shows options: the mod config popup lists the option and its variants
+    (docs/evidence/e2e-options.png); added mods appear in the library
+    (docs/evidence/e2e-library.png).

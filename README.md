@@ -162,11 +162,12 @@ Then add mods and **Deploy**.
 - [ ] `.deb` installs/runs in a Debian/Ubuntu environment
 - [ ] Game path auto-detected (Flatpak Steam)
 - [ ] Game path auto-detected (mod on second drive via `libraryfolders.vdf`)
-- [ ] Add mod from `.zip`
+- [x] Add mod from `.zip` (lands in the library; UI now notifies + opens it)
+- [x] Mod options shown and selectable in the UI (`docs/evidence/e2e-options.png`)
+- [x] Deploy writes the selected option's patch files into `<game>/data/`
+- [x] Purge removes deployed patch files and restores the baseline
 - [ ] Add mod from `.7z`
 - [ ] Add mod from `.rar`
-- [ ] Deploy writes patch files into `<game>/data/`
-- [ ] Purge removes deployed patch files
 - [ ] Game launches modded via Steam (`steam://launch/553850`)
 
 ### Report log
@@ -187,6 +188,16 @@ Render, minimize, and settings-page close are identical. The window close button
 on the main page was broken in upstream too (not a regression here); fixed in this
 fork via `preventDefault` + `destroy()` after saving profiles. Search filters by
 name/description and needs a mod present to show an effect.
+
+**2026-06-19 — mod deploy/purge.** Added SuperCreditArrows.zip and ran a full
+deploy/purge round-trip against the real game install
+([`docs/evidence/deploy-test.txt`](docs/evidence/deploy-test.txt)). Backup first:
+the data dir baseline was snapshotted and a standalone `scripts/revert-mods.sh`
+added; deploy only adds files and the base game has no matching patch files, so it
+is non-destructive. Deploy wrote the selected option's patch files into `data/`;
+purge removed them and the dir matched the baseline exactly. The mod's options are
+shown and selectable in the UI ([`docs/evidence/e2e-options.png`](docs/evidence/e2e-options.png)).
+Single-mod add now shows a notification and opens the library so it is visible.
 
 ## Validation and DevSecOps
 
