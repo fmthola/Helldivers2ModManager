@@ -11,6 +11,32 @@ validation rather than a rewrite.
 
 > Read about the original project on the upstream [website](https://teutinsa.github.io/hd2mm-site/index.html).
 
+## Code status
+
+Last full run: 2026-06-19. Produced by the suite in [`docs/TESTING.md`](docs/TESTING.md).
+Raw artifacts: [`docs/evidence/`](docs/evidence/).
+
+| Check | Result |
+| --- | --- |
+| SonarQube quality gate | ✅ Passed |
+| Vulnerabilities | 0 |
+| Security rating | A |
+| Security hotspots | 0 |
+| Bugs | 0 |
+| Reliability rating | A |
+| Maintainability rating | A |
+| Rust unit tests | 11 / 11 pass |
+| Frontend build | ✅ Clean |
+| App launches (E2E) | ✅ |
+
+### SonarQube dashboard
+
+Captured from the running SonarQube server, not a badge.
+
+![SonarQube dashboard showing quality gate passed, 0 bugs, 0 vulnerabilities, security A](docs/evidence/sonar-dashboard.png)
+
+More: [open issues](docs/evidence/sonar-issues.png) · [measures](docs/evidence/sonar-measures.png) · [running app window](docs/evidence/e2e-app-window.png).
+
 ## Status
 
 🚧 **Early / preview.** Based on the upstream `v2.0.0.0_preview3` tag. Builds and
@@ -143,18 +169,8 @@ loop in [`docs/TESTING.md`](docs/TESTING.md):
   (`tauri-driver`). A screenshot is captured each run:
   [`docs/evidence/e2e-app-window.png`](docs/evidence/e2e-app-window.png).
 
-Latest run — values from [`docs/evidence/`](docs/evidence/), not claims:
-
-| Check | Result |
-| --- | --- |
-| SonarQube quality gate | ✅ Pass |
-| Vulnerabilities | 0 |
-| Security rating | A |
-| Bugs | 0 |
-| Rust unit tests | 11 passing |
-| App launches (E2E) | ✅ |
-
-The loop re-runs these on every change, so the table is reproduced from evidence.
+The loop re-runs on every change. Current numbers are in [Code status](#code-status),
+sourced from `docs/evidence/`.
 
 > ⚠️ Modding online games can carry risk with anti-cheat. Use at your own
 > discretion and purge mods before playing if unsure.

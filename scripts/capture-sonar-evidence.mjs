@@ -22,9 +22,22 @@ import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const base = process.env.PLAYWRIGHT_REQUIRE_BASE || process.cwd();
-const require = createRequire(resolve(base) + "/");
-const { chromium } = require("playwright");
+// Resolve the 'playwright' module. Try, in order: an explicit base, the project,
+// then the shared runner cache.
+function loadChromium() {
+  const bases = [
+    process.env.PLAYWRIGHT_REQUIRE_BASE,
+    process.cwd(),
+    process.env.HOME ? `${process.env.HOME}/.cache/playwright-runner` : null,
+  ].filter(Boolean);
+  for (const b of bases) {
+    try {
+      return createRequire(resolve(b) + "/")("playwright").chromium;
+    } catch { /* try next */ }
+  }
+  throw new Error("playwright not found; set PLAYWRIGHT_REQUIRE_BASE to its install dir");
+}
+const chromium = loadChromium();
 
 const HOST = process.env.SONAR_HOST_URL || "http://localhost:9000";
 const KEY = process.env.SONAR_PROJECT_KEY || "helldivers2modmanager-linux";
