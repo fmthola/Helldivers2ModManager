@@ -1,14 +1,12 @@
 <script lang="ts">
-    import * as fs from "@tauri-apps/plugin-fs";
     import { open } from "@tauri-apps/plugin-dialog";
     import { beforeNavigate, onNavigate } from "$app/navigation";
     import { toSkipEntry, type SkipEntry } from "$lib/models/settings";
     import { useLocalization } from "$lib/state/localization.svelte";
-    import { detectGamePath, loadSettings, saveSettings } from "$lib/utils/commands";
+    import { detectGamePath, loadSettings, saveSettings, validateGamePath } from "$lib/utils/commands";
     import { Dash, Plus, ThreeDots } from "svelte-bootstrap-icons";
     import { usePopup } from "$lib/state/popup.svelte";
     import { InputPopup, NotificationPopup } from "$lib/types/popup";
-    import { path } from "@tauri-apps/api";
 
     const { t } = useLocalization();
     const { show: showPopup } = usePopup();
@@ -27,32 +25,16 @@
         let cancelled = false;
 
         const validationPromise = async () => {
-            const errors = [];
-            
-            if (!current.gamePath || current.gamePath.length === 0) {
-                errors.push(t("pages.settings.validation_error.game_path.empty"));
-            } else {
-                try {
-                    if (!await fs.exists(current.gamePath)) {
-                        errors.push(t("pages.settings.validation_error.game_path.exists"));
-                    } else {
-                        if (!await fs.exists(await path.join(current.gamePath, "tools"))) {
-                            errors.push(t("pages.settings.validation_error.game_path.tools_exists"));
-                        }
-                        
-                        if (!await fs.exists(await path.join(current.gamePath, "data"))) {
-                            errors.push(t("pages.settings.validation_error.game_path.data_exists"));
-                        }
-                        
-                        if (!await fs.exists(await path.join(current.gamePath, "bin"))) {
-                            errors.push(t("pages.settings.validation_error.game_path.bin_exists"));
-                        } else if (!await fs.exists(await path.join(current.gamePath, "bin", "helldivers2.exe"))) {
-                            errors.push(t("pages.settings.validation_error.game_path.exe_exists"));
-                        }
-                    }
-                } catch {
-                    errors.push(t("pages.settings.validation_error.game_path.invalid"));
-                }
+            let errors: string[];
+
+            try {
+                // Validation runs in the Rust backend, which has direct
+                // filesystem access (the webview's fs/path calls are subject to
+                // capability scope and were throwing here).
+                const keys = await validateGamePath(current.gamePath);
+                errors = keys.map(k => t(`pages.settings.validation_error.game_path.${k}`));
+            } catch {
+                errors = [t("pages.settings.validation_error.game_path.invalid")];
             }
 
             if (!cancelled) gamePathErrors = errors;

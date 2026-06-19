@@ -57,6 +57,10 @@ export async function detectGamePath(): Promise<string | null> {
     return await invoke<string | null>("detect_game_path");
 }
 
+export async function validateGamePath(path: string): Promise<string[]> {
+    return await invoke<string[]>("validate_game_path", { path });
+}
+
 export async function deploy(configs: Config[]): Promise<void> {
     await invoke<void>("deploy", { configs });
 }

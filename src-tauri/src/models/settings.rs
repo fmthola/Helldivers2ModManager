@@ -45,30 +45,10 @@ impl Settings {
     pub async fn validate(&self) -> anyhow::Result<()> {
         match self {
             Settings::V1 { game_path, .. } => {
-                if game_path.as_os_str().is_empty() {
-                    anyhow::bail!("`game_path` is empty");
+                match check_game_path(game_path).await.first() {
+                    Some(problem) => anyhow::bail!("invalid `game_path`: {}", problem),
+                    None => Ok(()),
                 }
-                
-                if !tokio::fs::try_exists(game_path).await.unwrap_or(false) {
-                    anyhow::bail!("`game_path` doesn't exist");
-                } else {
-                    if !tokio::fs::try_exists(game_path.join("tools")).await.unwrap_or(false) {
-                        anyhow::bail!("`game_path` doesn't contain dir \"tools\"");
-                    }
-                    if !tokio::fs::try_exists(game_path.join("data")).await.unwrap_or(false) {
-                        anyhow::bail!("`game_path` doesn't contain dir \"data\"");
-                    }
-                    let bin_path = game_path.join("bin");
-                    if !tokio::fs::try_exists(&bin_path).await.unwrap_or(false) {
-                        anyhow::bail!("`game_path` doesn't contain dir \"bin\"");
-                    } else {
-                        if !tokio::fs::try_exists(bin_path.join("helldivers2.exe")).await.unwrap_or(false) {
-                            anyhow::bail!("\"bin\" dir does not contain \"helldivers2.exe\"");
-                        }
-                    }
-                }
-                
-                Ok(())
             },
         }
     }
@@ -92,6 +72,39 @@ impl Settings {
             },
         }
     }
+}
+
+/// Check a candidate Helldivers 2 install directory.
+///
+/// Returns a stable error key for each failed check (matching the frontend
+/// i18n keys under `pages.settings.validation_error.game_path`). An empty
+/// vector means the path is valid. Runs in Rust so it does not depend on the
+/// webview's filesystem capability scope.
+pub async fn check_game_path(path: &Path) -> Vec<&'static str> {
+    let mut errors = Vec::new();
+
+    if path.as_os_str().is_empty() {
+        errors.push("empty");
+        return errors;
+    }
+    if !tokio::fs::try_exists(path).await.unwrap_or(false) {
+        errors.push("exists");
+        return errors;
+    }
+    if !tokio::fs::try_exists(path.join("tools")).await.unwrap_or(false) {
+        errors.push("tools_exists");
+    }
+    if !tokio::fs::try_exists(path.join("data")).await.unwrap_or(false) {
+        errors.push("data_exists");
+    }
+    let bin = path.join("bin");
+    if !tokio::fs::try_exists(&bin).await.unwrap_or(false) {
+        errors.push("bin_exists");
+    } else if !tokio::fs::try_exists(bin.join("helldivers2.exe")).await.unwrap_or(false) {
+        errors.push("exe_exists");
+    }
+
+    errors
 }
 
 #[cfg(test)]
@@ -163,5 +176,67 @@ mod tests {
         };
         assert!(s.has_skip_entry("0cf14e223de06a26"));
         assert!(!s.has_skip_entry("ffffffffffffffff"));
+    }
+
+    // Lay out a valid install under `root`.
+    fn make_install(root: &Path) {
+        fs::create_dir_all(root.join("tools")).unwrap();
+        fs::create_dir_all(root.join("data")).unwrap();
+        fs::create_dir_all(root.join("bin")).unwrap();
+        fs::write(root.join("bin").join("helldivers2.exe"), b"").unwrap();
+    }
+
+    #[tokio::test]
+    async fn check_valid_path_has_no_errors() {
+        let dir = valid_install();
+        assert!(check_game_path(dir.path()).await.is_empty());
+    }
+
+    // The path Steam uses contains a space ("Helldivers 2"). Confirm that is fine.
+    #[tokio::test]
+    async fn check_path_with_spaces_is_valid() {
+        let dir = TempDir::new().unwrap();
+        let root = dir.path().join("steamapps/common/Helldivers 2");
+        make_install(&root);
+        assert!(check_game_path(&root).await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn check_empty_path() {
+        assert_eq!(check_game_path(Path::new("")).await, vec!["empty"]);
+    }
+
+    #[tokio::test]
+    async fn check_nonexistent_path() {
+        assert_eq!(check_game_path(Path::new("/no/such/dir/xyz")).await, vec!["exists"]);
+    }
+
+    #[tokio::test]
+    async fn check_reports_each_missing_piece() {
+        let dir = valid_install();
+        fs::remove_dir_all(dir.path().join("tools")).unwrap();
+        assert_eq!(check_game_path(dir.path()).await, vec!["tools_exists"]);
+
+        let dir = valid_install();
+        fs::remove_dir_all(dir.path().join("data")).unwrap();
+        assert_eq!(check_game_path(dir.path()).await, vec!["data_exists"]);
+
+        let dir = valid_install();
+        fs::remove_dir_all(dir.path().join("bin")).unwrap();
+        assert_eq!(check_game_path(dir.path()).await, vec!["bin_exists"]);
+
+        let dir = valid_install();
+        fs::remove_file(dir.path().join("bin").join("helldivers2.exe")).unwrap();
+        assert_eq!(check_game_path(dir.path()).await, vec!["exe_exists"]);
+    }
+
+    #[tokio::test]
+    async fn check_reports_multiple_missing() {
+        let dir = TempDir::new().unwrap();
+        // Exists but empty: tools, data, and bin are all missing.
+        let errs = check_game_path(dir.path()).await;
+        assert!(errs.contains(&"tools_exists"));
+        assert!(errs.contains(&"data_exists"));
+        assert!(errs.contains(&"bin_exists"));
     }
 }

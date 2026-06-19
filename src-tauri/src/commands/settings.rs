@@ -118,3 +118,15 @@ pub async fn save_settings(state: State<'_, AppState>, settings: Settings) -> TA
 pub  async fn check_settings(state: State<'_, AppState>) -> TAResult<bool> {
     do_check_settings(&state.base_path).await.into_ta_result()
 }
+
+/// Validate an arbitrary game path string and return the list of failed-check
+/// keys (empty = valid). Done in Rust so it does not depend on the webview's
+/// filesystem capability scope.
+#[tauri::command]
+pub async fn validate_game_path(path: String) -> Vec<String> {
+    crate::models::settings::check_game_path(Path::new(&path))
+        .await
+        .into_iter()
+        .map(String::from)
+        .collect()
+}
