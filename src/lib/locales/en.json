@@ -68,6 +68,9 @@
                     },
                     "deploy_success": {
                         "message": "Deployment successful."
+                    },
+                    "add_success": {
+                        "message": "Mod added to the library."
                     }
                 },
                 "error": {

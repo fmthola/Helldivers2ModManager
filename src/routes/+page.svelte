@@ -218,6 +218,12 @@
         try {
             const mod = await addMod(filename);
             mods.push(mod);
+            // Make it obvious the mod arrived: open the library and notify.
+            // Without this the mod lands in the collapsed library panel and the
+            // add looks like it did nothing.
+            libraryExtended = true;
+            libraryVisible = true;
+            showPopup(new NotificationPopup("info", t("pages.mods.popup.notification.add_success.message")));
         } catch(ex: unknown) {
             let message: string;
             if (ex instanceof Error) {
@@ -259,6 +265,10 @@
             
             const modsToAdd = results.filter(r => "Ok" in r).map(r => r.Ok);
             mods.push(...modsToAdd);
+            if (modsToAdd.length > 0) {
+                libraryExtended = true;
+                libraryVisible = true;
+            }
         } catch(ex: unknown) {
             let message: string;
             if (ex instanceof Error) {
