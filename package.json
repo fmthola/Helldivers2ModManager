@@ -11,7 +11,10 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "tauri": "tauri",
     "scan:i18n": "node scripts/check-i18n.mjs",
-    "build:checked": "pnpm run scan:i18n && pnpm run build"
+    "build:checked": "pnpm run scan:i18n && pnpm run build",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --lib",
+    "test:e2e": "node e2e/smoke.test.mjs",
+    "test": "pnpm run test:rust && pnpm run test:e2e"
   },
   "license": "MIT",
   "dependencies": {
@@ -31,6 +34,7 @@
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tailwindcss/vite": "^4.2.2",
     "@tauri-apps/cli": "^2",
+    "selenium-webdriver": "^4.45.0",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "tailwindcss": "^4.2.2",
