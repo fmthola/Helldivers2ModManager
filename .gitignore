@@ -38,3 +38,7 @@ src-tauri/lcov.info
 .claude/
 CLAUDE.md
 CLAUDE.local.md
+
+# Private baseline / process docs (kept in ~, not published)
+BASELINE.md
+docs/BASELINE.md
