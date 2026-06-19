@@ -1,6 +1,28 @@
-use std::{ffi::OsStr, fs::File, io::Read, path::{Path, PathBuf}};
+use std::{ffi::OsStr, fs::File, io::Read, path::{Component, Path, PathBuf}};
 
 use zip::ZipArchive;
+
+/// Returns `true` only if `path` is a relative path that stays within its
+/// extraction root: no absolute/root/prefix components, and no `..` that would
+/// climb above the root. Used to block path-traversal attacks from archives.
+fn is_safe_entry_path(path: &Path) -> bool {
+    let mut depth: i32 = 0;
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::Normal(_) => depth += 1,
+            Component::ParentDir => {
+                depth -= 1;
+                if depth < 0 {
+                    return false;
+                }
+            }
+            // Absolute roots and Windows path prefixes (e.g. C:\) escape the root.
+            Component::RootDir | Component::Prefix(_) => return false,
+        }
+    }
+    true
+}
 
 enum ArchiveInner {
     Zip(ZipArchive<File>),
@@ -144,6 +166,22 @@ impl Archive {
         if !path.as_ref().is_dir() {
             return Err(anyhow::anyhow!("path is not a directory"));
         }
+
+        // Guard against path traversal ("zip-slip") from untrusted mod archives.
+        // The `zip` crate sanitizes paths itself, but `sevenz-rust2` and `unrar`
+        // join the raw entry name onto the destination with no checks, so a
+        // crafted `.7z`/`.rar` could write outside the mod directory (e.g. into
+        // ~/.config/autostart). Reject the whole archive if any entry escapes.
+        for entry in self.iter()? {
+            let entry = entry?;
+            if !is_safe_entry_path(entry.path()) {
+                return Err(anyhow::anyhow!(
+                    "refusing to extract archive: unsafe entry path {:?}",
+                    entry.path()
+                ));
+            }
+        }
+
         match &mut self.0 {
             ArchiveInner::Zip(archive) => {
                 archive.extract(path.as_ref()).map_err(anyhow::Error::from)
@@ -275,5 +313,29 @@ impl ArchiveEntry {
 
     pub fn path(&self) -> &Path {
         &self.path
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_safe_entry_path;
+    use std::path::Path;
+
+    #[test]
+    fn allows_normal_relative_paths() {
+        assert!(is_safe_entry_path(Path::new("foo.patch_0")));
+        assert!(is_safe_entry_path(Path::new("sub/dir/file.txt")));
+        assert!(is_safe_entry_path(Path::new("./a/b")));
+        // `..` is fine as long as it never climbs above the root.
+        assert!(is_safe_entry_path(Path::new("a/../b")));
+    }
+
+    #[test]
+    fn rejects_traversal_and_absolute_paths() {
+        assert!(!is_safe_entry_path(Path::new("../evil")));
+        assert!(!is_safe_entry_path(Path::new("../../../home/user/.bashrc")));
+        assert!(!is_safe_entry_path(Path::new("a/../../escape")));
+        assert!(!is_safe_entry_path(Path::new("/etc/passwd")));
+        assert!(!is_safe_entry_path(Path::new("/root/.config/autostart/x.desktop")));
     }
 }
