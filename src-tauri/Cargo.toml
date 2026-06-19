@@ -33,5 +33,9 @@ tauri-plugin-dialog = "2.7"
 futures = "0.3"
 regex = "1.12"
 
+[dev-dependencies]
+tokio = { version = "1.52", features = ["fs", "rt", "macros"] }
+tempfile = "3"
+
 [target.x86_64-pc-windows-gnu]
 linker = "x86_64-w64-mingw32-gcc"

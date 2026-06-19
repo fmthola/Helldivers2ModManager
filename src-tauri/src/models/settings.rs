@@ -93,3 +93,75 @@ impl Settings {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    /// Build a temp dir that looks like a valid Helldivers 2 install.
+    fn valid_install() -> TempDir {
+        let dir = TempDir::new().unwrap();
+        let root = dir.path();
+        fs::create_dir(root.join("tools")).unwrap();
+        fs::create_dir(root.join("data")).unwrap();
+        fs::create_dir(root.join("bin")).unwrap();
+        // Present under Proton too — only existence is checked.
+        fs::write(root.join("bin").join("helldivers2.exe"), b"").unwrap();
+        dir
+    }
+
+    fn settings_for(path: &Path) -> Settings {
+        Settings::V1 { game_path: path.to_path_buf(), skip_list: vec![] }
+    }
+
+    #[tokio::test]
+    async fn valid_install_passes() {
+        let dir = valid_install();
+        assert!(settings_for(dir.path()).validate().await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn empty_path_fails() {
+        let s = Settings::V1 { game_path: PathBuf::new(), skip_list: vec![] };
+        assert!(s.validate().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn missing_path_fails() {
+        let s = settings_for(Path::new("/nonexistent/hd2/path/xyz"));
+        assert!(s.validate().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn missing_tools_fails() {
+        let dir = valid_install();
+        fs::remove_dir_all(dir.path().join("tools")).unwrap();
+        assert!(settings_for(dir.path()).validate().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn missing_data_fails() {
+        let dir = valid_install();
+        fs::remove_dir_all(dir.path().join("data")).unwrap();
+        assert!(settings_for(dir.path()).validate().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn missing_exe_fails() {
+        let dir = valid_install();
+        fs::remove_file(dir.path().join("bin").join("helldivers2.exe")).unwrap();
+        assert!(settings_for(dir.path()).validate().await.is_err());
+    }
+
+    #[test]
+    fn skip_entry_lookup() {
+        let s = Settings::V1 {
+            game_path: PathBuf::new(),
+            skip_list: vec![*b"0cf14e223de06a26"],
+        };
+        assert!(s.has_skip_entry("0cf14e223de06a26"));
+        assert!(!s.has_skip_entry("ffffffffffffffff"));
+    }
+}

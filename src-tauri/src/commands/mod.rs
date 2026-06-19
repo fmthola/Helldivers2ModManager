@@ -13,6 +13,9 @@ pub mod settings;
 static PATCH_REGEX: OnceLock<Regex> = OnceLock::new();
 static INDEX_REGEX: OnceLock<Regex> = OnceLock::new();
 
+/// Pattern for the patch-file triplet names the game loads from its `data` dir.
+const PATCH_PATTERN: &str = r"^[0-9a-f]{16}\.patch_\d+(?:\.gpu_resources|\.stream)?$";
+
 struct PatchFileTriplet {
     patch: Option<PathBuf>,
     gpu_resources: Option<PathBuf>,
@@ -20,7 +23,7 @@ struct PatchFileTriplet {
 }
 
 async fn get_patch_files_from_dir(dir: &Path) -> anyhow::Result<Vec<PathBuf>> {
-    let patch_regex = PATCH_REGEX.get_or_init(|| Regex::new(r"^[0-9a-f]{16}\.patch_\d+(?:\.gpu_resources|\.stream)?$").unwrap());
+    let patch_regex = PATCH_REGEX.get_or_init(|| Regex::new(PATCH_PATTERN).unwrap());
 
     let mut entries = Vec::new();
     let mut dir_reader = tokio::fs::read_dir(dir).await?;
@@ -233,4 +236,40 @@ pub async fn purge(state: State<'_, AppState>) -> TAResult<()> {
 
     let data_dir = settings.game_path().join("data");
     do_purge(&data_dir).await.into_ta_result()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PATCH_PATTERN;
+    use regex::Regex;
+
+    fn re() -> Regex {
+        Regex::new(PATCH_PATTERN).unwrap()
+    }
+
+    #[test]
+    fn matches_valid_patch_names() {
+        let re = re();
+        assert!(re.is_match("0cf14e223de06a26.patch_0"));
+        assert!(re.is_match("0cf14e223de06a26.patch_12"));
+        assert!(re.is_match("0cf14e223de06a26.patch_0.gpu_resources"));
+        assert!(re.is_match("0cf14e223de06a26.patch_3.stream"));
+    }
+
+    #[test]
+    fn rejects_non_patch_names() {
+        let re = re();
+        // Not 16 hex chars.
+        assert!(!re.is_match("0cf14e223de06a2.patch_0"));
+        assert!(!re.is_match("0cf14e223de06a26z.patch_0"));
+        // Uppercase hex is not allowed.
+        assert!(!re.is_match("0CF14E223DE06A26.patch_0"));
+        // Missing index.
+        assert!(!re.is_match("0cf14e223de06a26.patch_"));
+        // Unrelated files in the data dir must be ignored.
+        assert!(!re.is_match("game.exe"));
+        assert!(!re.is_match("0cf14e223de06a26.patch_0.bak"));
+        // Traversal-looking name must not match.
+        assert!(!re.is_match("../0cf14e223de06a26.patch_0"));
+    }
 }
