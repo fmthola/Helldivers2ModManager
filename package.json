@@ -14,6 +14,7 @@
     "build:checked": "pnpm run scan:i18n && pnpm run build",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --lib",
     "test:e2e": "node e2e/smoke.test.mjs",
+    "test:artifact": "node e2e/artifact.test.mjs",
     "test": "pnpm run test:rust && pnpm run test:e2e"
   },
   "license": "MIT",
