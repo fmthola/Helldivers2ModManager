@@ -40,7 +40,7 @@ function findAppImage() {
 }
 
 function cleanup(td) {
-  try { td && td.kill("SIGKILL"); } catch { /* gone */ }
+  try { td?.kill("SIGKILL"); } catch { /* gone */ }
   // Use exact process-name matching (-x), not -f: a -f cmdline match can
   // accidentally kill unrelated processes whose arguments contain these names.
   spawnSync("pkill", ["-9", "-x", "WebKitWebDriver"]);

@@ -1,7 +1,7 @@
 import * as log from '@tauri-apps/plugin-log';
 import { loadTranslations } from '$lib/services/localization';
 import type { Locale, TranslationKey, Translations } from '$lib/types/localization';
-import '$lib/utils/stringExtensions';
+import { format } from '$lib/utils/stringExtensions';
 
 let locale = $state<Locale>('en');
 let translations = $state<Translations>({});
@@ -31,12 +31,11 @@ export function useLocalization() {
                 return `{${key}}`;
             }
 
-            const template = current as string;
+            const template: string = current;
             if (!args)
                 return template;
 
-            const format = template.format(args);
-            return format;
+            return format(template, args);
         },
 
         async setLocale(value: Locale) {

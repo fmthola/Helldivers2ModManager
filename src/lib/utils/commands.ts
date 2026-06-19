@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import * as log from '@tauri-apps/plugin-log';
 import { Mod } from '../models/mod';
 import type { Config, ProfilesConfig } from '$lib/models/profile';
 import type { Manifest } from '$lib/models/manifest';

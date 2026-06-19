@@ -10,7 +10,11 @@ export function usePopup() {
         },
 
         get currentPopup(): Popup<any> {
-            return popups[popups.length - 1];
+            const last = popups.at(-1);
+            if (!last) {
+                throw new Error("currentPopup accessed with no popups shown");
+            }
+            return last;
         },
 
         async show<T = void>(popup: Popup<T>): Promise<T> {

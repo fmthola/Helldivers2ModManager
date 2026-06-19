@@ -13,6 +13,7 @@
     "scan:i18n": "node scripts/check-i18n.mjs",
     "build:checked": "pnpm run scan:i18n && pnpm run build",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --lib",
+    "test:unit": "vitest run --coverage",
     "test:e2e": "node e2e/smoke.test.mjs",
     "test:artifact": "node e2e/artifact.test.mjs",
     "test:regression": "node e2e/regression.test.mjs",
@@ -37,11 +38,13 @@
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tailwindcss/vite": "^4.2.2",
     "@tauri-apps/cli": "^2",
+    "@vitest/coverage-v8": "^4.1.9",
     "selenium-webdriver": "^4.45.0",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "tailwindcss": "^4.2.2",
     "typescript": "~5.6.2",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "vitest": "^4.1.9"
   }
 }

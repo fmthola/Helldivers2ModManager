@@ -1,12 +1,7 @@
-declare global {
-    interface String {
-        format(args: Record<string, unknown> | unknown[]): string;
-    }
-}
-
-String.prototype.format = function (args): string {
-    return this.replace(/\{(\w+)\}/g, (_, k) => {
-        const value = Array.isArray(args) ? args[parseInt(k)] : args[k];
+// Fill `{name}` / `{0}` placeholders in a template from an object or array.
+export function format(template: string, args: Record<string, unknown> | unknown[]): string {
+    return template.replace(/\{(\w+)\}/g, (_, k) => {
+        const value = Array.isArray(args) ? args[Number.parseInt(k)] : args[k];
         if (value === undefined || value === null) return `{${k}}`;
         if (typeof value === "string") return value;
         if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
@@ -15,5 +10,3 @@ String.prototype.format = function (args): string {
         return JSON.stringify(value);
     });
 }
-
-export {};
