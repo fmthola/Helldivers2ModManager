@@ -4,7 +4,7 @@ use anyhow_tauri::{IntoTAResult, TAResult};
 use regex::Regex;
 use tauri::State;
 
-use crate::{AppState, commands::settings::{do_check_settings, do_load_settings, load_settings}, models::{manifest::Manifest, profile::Config}};
+use crate::{AppState, commands::settings::{do_load_settings, load_settings}, models::{Mod, manifest::{Manifest, v1}, profile::Config, settings::Settings}};
 
 pub mod mods;
 pub mod profiles;
@@ -110,6 +110,101 @@ async fn do_purge(data_dir: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Copy `src` to `dest`, or create an empty file when there is no source.
+async fn deploy_file(src: &Option<PathBuf>, dest: PathBuf) -> anyhow::Result<()> {
+    match src {
+        Some(s) => { tokio::fs::copy(s, &dest).await?; }
+        None => { tokio::fs::File::create(&dest).await?; }
+    }
+    Ok(())
+}
+
+/// Write each grouped patch triplet into the game `data` dir, applying the
+/// skip-list index offset per asset name.
+async fn write_groups(
+    data_dir: &Path,
+    settings: &Settings,
+    groups: &HashMap<String, Vec<PatchFileTriplet>>,
+) -> anyhow::Result<()> {
+    for (name, triplets) in groups {
+        let offset = if settings.has_skip_entry(name) { 1 } else { 0 };
+
+        for (i, triplet) in triplets.iter().enumerate() {
+            let index = i + offset;
+            deploy_file(&triplet.patch, data_dir.join(format!("{name}.patch_{index}"))).await?;
+            deploy_file(&triplet.gpu_resources, data_dir.join(format!("{name}.patch_{index}.gpu_resources"))).await?;
+            deploy_file(&triplet.stream, data_dir.join(format!("{name}.patch_{index}.stream"))).await?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Collect the files a V1 mod contributes for its toggled options and the
+/// selected sub-option of each.
+async fn collect_v1_files(
+    base: &Path,
+    manifest: &v1::Manifest,
+    toggled: &[bool],
+    selected: &[usize],
+    groups: &mut HashMap<String, Vec<PatchFileTriplet>>,
+) -> anyhow::Result<()> {
+    let Some(options) = manifest.options.as_ref() else {
+        return add_files_from_dir(base, groups).await;
+    };
+
+    for (i, opt) in options.iter().enumerate() {
+        if !toggled.get(i).copied().unwrap_or(false) {
+            continue;
+        }
+
+        for inc in opt.include.iter().flatten() {
+            add_files_from_dir(&base.join(inc), groups).await?;
+        }
+
+        let sub = opt.sub_options.as_ref()
+            .and_then(|subs| selected.get(i).copied().and_then(|idx| subs.get(idx)));
+        if let Some(sub) = sub {
+            for inc in &sub.include {
+                add_files_from_dir(&base.join(inc), groups).await?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Collect the files an enabled mod contributes, based on its manifest + config.
+async fn collect_mod_files(
+    r#mod: &Mod,
+    config: &Config,
+    groups: &mut HashMap<String, Vec<PatchFileTriplet>>,
+) -> anyhow::Result<()> {
+    let base = &r#mod.directory;
+
+    match (&r#mod.manifest, config) {
+        (Manifest::Legacy(manifest), Config::Legacy { selected, .. }) => {
+            match manifest.options.as_ref() {
+                Some(options) => {
+                    if let Some(opt) = options.get(*selected) {
+                        add_files_from_dir(&base.join(opt), groups).await?;
+                    }
+                }
+                None => add_files_from_dir(base, groups).await?,
+            }
+        }
+        (Manifest::V1(manifest), Config::V1 { toggled, selected, .. }) => {
+            collect_v1_files(base, manifest, toggled, selected, groups).await?;
+        }
+        (Manifest::V2(_), Config::V2 { .. }) => {
+            anyhow::bail!("V2 manifest mods not supported yet");
+        }
+        _ => unreachable!("manifest and config version should always match"),
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn deploy(state: State<'_, AppState>, configs: Vec<Config>) -> TAResult<()> {
     let mods = state.inner().mods.lock().await;
@@ -123,108 +218,26 @@ pub async fn deploy(state: State<'_, AppState>, configs: Vec<Config>) -> TAResul
         return anyhow::anyhow!("invalid settings: {}", e).into_ta_result();
     }
 
-    let mods = mods.iter()
-        .map(|m| (m.guid(), m))
-        .collect::<HashMap<_, _>>();
-    let mods = configs.iter()
-        .filter_map(|c| {
-            mods.get(c.uuid()).map(|m| (*m, c))
-        })
+    let by_guid = mods.iter().map(|m| (m.guid(), m)).collect::<HashMap<_, _>>();
+    let selected = configs.iter()
+        .filter_map(|c| by_guid.get(c.uuid()).map(|m| (*m, c)))
         .collect::<Vec<_>>();
 
     let data_dir = settings.game_path().join("data");
-
     do_purge(&data_dir).await?;
 
-    if mods.is_empty() {
+    if selected.is_empty() {
         return Ok(());
     }
 
     let mut groups: HashMap<String, Vec<PatchFileTriplet>> = HashMap::new();
-
-    for (r#mod, config) in mods {
-        if !config.enabled() {
-            continue;
-        }
-
-        match (&r#mod.manifest, config) {
-            (Manifest::Legacy(manifest), Config::Legacy { selected, .. }) => {
-                let base = &r#mod.directory;
-
-                if let Some(options) = manifest.options.as_ref() {
-                    if let Some(opt) = options.get(*selected) {
-                        let dir = base.join(opt);
-                        add_files_from_dir(&dir, &mut groups).await?;
-                    }
-                } else {
-                    add_files_from_dir(base, &mut groups).await?;
-                }
-            }
-            (Manifest::V1(manifest), Config::V1 { selected, toggled, .. }) => {
-                let base = &r#mod.directory;
-
-                if let Some(options) = manifest.options.as_ref() {
-                    for (i, opt) in options.iter().enumerate() {
-                        if !toggled.get(i).copied().unwrap_or(false) {
-                            continue;
-                        }
-
-                        if let Some(includes) = opt.include.as_ref() {
-                            for inc in includes {
-                                let dir = base.join(inc);
-                                add_files_from_dir(&dir, &mut groups).await?;
-                            }
-                        }
-
-                        if let Some(sub_options) = opt.sub_options.as_ref() {
-                            if let Some(idx) = selected.get(i).cloned() {
-                                if let Some(sub) = sub_options.get(idx) {
-                                    for inc in &sub.include {
-                                        let dir = base.join(inc);
-                                        add_files_from_dir(&dir, &mut groups).await?;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    add_files_from_dir(base, &mut groups).await?;
-                }
-            }
-            (Manifest::V2(manifest), Config::V2 { selected, toggled, .. }) => {
-                todo!("V2 manifest mods not supported yet");
-            }
-            _ => unreachable!("manifest and config version should always match")
-        }
-    }
-    
-    for (name, triplets) in &groups {
-        let offset = if settings.has_skip_entry(name) { 1 } else { 0 };
-
-        for (i, triplet) in triplets.iter().enumerate() {
-            let index = i + offset;
-
-            let patch_dest = data_dir.join(format!("{}.patch_{}", name, index));
-            match &triplet.patch {
-                Some(src) => { tokio::fs::copy(src, &patch_dest).await.into_ta_result()?; }
-                None => { tokio::fs::File::create(&patch_dest).await.into_ta_result()?; }
-            }
-            
-            let gpu_dest = data_dir.join(format!("{}.patch_{}.gpu_resources", name, index));
-            match &triplet.gpu_resources {
-                Some(src) => { tokio::fs::copy(src, &gpu_dest).await.into_ta_result()?; }
-                None => { tokio::fs::File::create(&gpu_dest).await.into_ta_result()?; }
-            }
-            
-            let stream_dest = data_dir.join(format!("{}.patch_{}.stream", name, index));
-            match &triplet.stream {
-                Some(src) => { tokio::fs::copy(src, &stream_dest).await.into_ta_result()?; }
-                None => { tokio::fs::File::create(&stream_dest).await.into_ta_result()?; }
-            }
+    for (r#mod, config) in selected {
+        if config.enabled() {
+            collect_mod_files(r#mod, config, &mut groups).await?;
         }
     }
 
-    Ok(())
+    write_groups(&data_dir, &settings, &groups).await.into_ta_result()
 }
 
 #[tauri::command]

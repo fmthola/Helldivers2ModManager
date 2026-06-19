@@ -2,7 +2,7 @@ pub mod manifest;
 pub mod profile;
 pub mod settings;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use manifest::Manifest;
@@ -71,36 +71,32 @@ impl Mod {
     }
 
     pub async fn normalize_paths(&mut self) -> anyhow::Result<()> {
+        let dir = self.directory.clone();
         match &mut self.manifest {
             Manifest::Legacy(manifest) => {
-                if let Some(icon_path) = manifest.icon_path.as_ref() {
-                    manifest.icon_path = Some(fix_path_casing(&self.directory, icon_path).await?);
-                }
+                normalize_image(&dir, &mut manifest.icon_path).await?;
             }
             Manifest::V1(manifest) => {
-                if let Some(icon_path) = manifest.icon_path.as_ref() {
-                    manifest.icon_path = Some(fix_path_casing(&self.directory, icon_path).await?);
-                }
-
-                if let Some(options) = manifest.options.as_mut() {
-                    for opt in options {
-                        if let Some(image) = opt.image.as_ref() {
-                            opt.image = Some(fix_path_casing(&self.directory, image).await?);
-                        }
-
-                        if let Some(sub_options) = opt.sub_options.as_mut() {
-                            for sub in sub_options {
-                                if let Some(image) = sub.image.as_ref() {
-                                    sub.image = Some(fix_path_casing(&self.directory, image).await?);
-                                }
-                            }
-                        }
+                normalize_image(&dir, &mut manifest.icon_path).await?;
+                for opt in manifest.options.iter_mut().flatten() {
+                    normalize_image(&dir, &mut opt.image).await?;
+                    for sub in opt.sub_options.iter_mut().flatten() {
+                        normalize_image(&dir, &mut sub.image).await?;
                     }
                 }
             }
-            Manifest::V2(manifest) => todo!()
+            // V2 is not supported yet; leave its paths untouched rather than panic.
+            Manifest::V2(_) => {}
         }
 
         Ok(())
     }
+}
+
+/// Rewrite an optional image path in place to match the on-disk casing.
+async fn normalize_image(dir: &Path, image: &mut Option<PathBuf>) -> anyhow::Result<()> {
+    if let Some(path) = image.as_ref() {
+        *image = Some(fix_path_casing(dir, path).await?);
+    }
+    Ok(())
 }

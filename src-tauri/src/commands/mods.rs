@@ -6,7 +6,7 @@ use crate::{
     },
     AppState,
 };
-use anyhow_tauri::{IntoTAResult, TAResult};
+use anyhow_tauri::{IntoTAResult, TAResult, TACommandError};
 use rand::{rngs::SysRng, TryRng};
 use std::{collections::HashSet, path::PathBuf};
 use tauri::State;
@@ -109,7 +109,7 @@ pub async fn add_mod(state: State<'_, AppState>, archive_file: PathBuf) -> TARes
     let archive = Archive::open(&archive_file)?;
 
     let name = archive_file
-        .file_prefix()
+        .file_stem()
         .unwrap()
         .to_str()
         .map(str::to_string)
@@ -132,7 +132,7 @@ pub async fn add_mod(state: State<'_, AppState>, archive_file: PathBuf) -> TARes
         return anyhow::anyhow!("mod with GUID {{{}}} already exists", r#mod.guid())
             .into_ta_result();
     }
-    
+
     extract_archive(archive, mod_dir).await?;
 
     if let Err(e) = r#mod.normalize_paths().await {
@@ -144,6 +144,26 @@ pub async fn add_mod(state: State<'_, AppState>, archive_file: PathBuf) -> TARes
     Ok(r#mod)
 }
 
+/// Mark as an error any item whose mod GUID is already present in `seen`.
+fn reject_duplicate_guids(
+    items: Vec<TAResult<(Archive, Mod)>>,
+    seen: &mut HashSet<Uuid>,
+    message: &str,
+) -> Vec<TAResult<(Archive, Mod)>> {
+    items
+        .into_iter()
+        .map(|result| {
+            result.and_then(|(archive, r#mod)| {
+                if seen.insert(r#mod.guid()) {
+                    Ok((archive, r#mod))
+                } else {
+                    anyhow_tauri::bail!("{}: {{{}}}", message, r#mod.guid())
+                }
+            })
+        })
+        .collect()
+}
+
 #[tauri::command]
 pub async fn add_mods(state: State<'_, AppState>, archive_files: Vec<PathBuf>) -> TAResult<Vec<TAResult<Mod>>> {
     let mut mods = state.mods.lock().await;
@@ -151,144 +171,85 @@ pub async fn add_mods(state: State<'_, AppState>, archive_files: Vec<PathBuf>) -
         return anyhow::anyhow!("mods not read").into_ta_result();
     }
     let mods = mods.as_mut().unwrap();
-    
-    let data = archive_files
+
+    let opened = archive_files
         .iter()
         .map(|archive_file| Archive::open(archive_file).into_ta_result())
         .collect::<Vec<_>>();
 
     let data = archive_files
         .into_iter()
-        .zip(data)
-        .map(|(archive_file, result)| {
-            result
-                .zip_value(archive_file)
-                .map(|(archive, archive_file)| {
-                    let name = archive_file
-                        .file_prefix()
-                        .unwrap()
-                        .to_str()
-                        .map(str::to_string)
-                        .ok_or(anyhow::anyhow!("file name conversion failed"))
-                        .into_ta_result()?;
-                    Ok((archive, name))
-                })
-                .flatten()
+        .zip(opened)
+        .map(|(archive_file, result)| -> TAResult<(Archive, String)> {
+            let (archive, archive_file) = result.zip_value(archive_file)?;
+            let name = archive_file
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .map(str::to_string)
+                .ok_or(anyhow::anyhow!("file name conversion failed"))
+                .into_ta_result()?;
+            Ok((archive, name))
         })
         .collect::<Vec<_>>();
 
     let data = data
         .into_iter()
         .map(|result| {
-            result
-                .map(|(archive, name)| {
-                    let mut mod_dir = state.base_path.join(MODS_DIRECTORY);
-                    mod_dir.push(&name);
-                    let manifest_file = mod_dir.join(MANIFEST_FILE);
-                    (archive, name, mod_dir, manifest_file)
-                })
+            result.map(|(archive, name)| {
+                let mut mod_dir = state.base_path.join(MODS_DIRECTORY);
+                mod_dir.push(&name);
+                let manifest_file = mod_dir.join(MANIFEST_FILE);
+                (archive, name, mod_dir, manifest_file)
+            })
         })
         .collect::<Vec<_>>();
 
-    let data = futures::future::join_all(
-        data.into_iter().map(|result| async {
-            match result {
-                Ok((archive, name, mod_dir, manifest_file)) => {
-                    prepare_mod_dir(mod_dir.clone(), manifest_file.clone(), name.clone()).await?;
-                    Ok((archive, name, mod_dir, manifest_file))
-                }
-                Err(e) => Err(e)
-            }
-        })
-    ).await;
+    let data = futures::future::join_all(data.into_iter().map(|result| async {
+        let (archive, name, mod_dir, manifest_file) = result?;
+        prepare_mod_dir(mod_dir.clone(), manifest_file.clone(), name.clone()).await?;
+        Ok::<_, TACommandError>((archive, name, mod_dir, manifest_file))
+    })).await;
 
-    let data = futures::future::join_all(
-        data.into_iter().map(|result| async {
-            match result {
-                Ok((archive, name, mod_dir, manifest_file)) => {
-                    let (archive, manifest) = resolve_manifest(archive, name, manifest_file).await?;
-                    Ok((archive, mod_dir, manifest))
-                }
-                Err(e) => Err(e)
-            }
-        })
-    ).await;
-    
+    let data = futures::future::join_all(data.into_iter().map(|result| async {
+        let (archive, name, mod_dir, manifest_file) = result?;
+        let (archive, manifest) = resolve_manifest(archive, name, manifest_file).await?;
+        Ok::<_, TACommandError>((archive, mod_dir, manifest))
+    })).await;
+
     let data = data
         .into_iter()
         .map(|result| {
             result.map(|(archive, mod_dir, manifest)| {
-                let r#mod = Mod {
-                    manifest,
-                    directory: mod_dir
-                };
-                (archive, r#mod)
+                (archive, Mod { manifest, directory: mod_dir })
             })
         })
         .collect::<Vec<_>>();
-    
-    let mut guids: HashSet<Uuid> = mods.iter().map(|m| m.guid()).collect();
-    let data = data
-        .into_iter()
-        .map(|result| {
-            result.map(|(archive, r#mod)| {
-                let guid = r#mod.guid();
-                if guids.insert(guid) {
-                    Ok((archive, r#mod))
-                } else {
-                    anyhow_tauri::bail!("mod with GUID {{{}}} already exists", guid)
-                }
-            })
-            .flatten()
-        })
-        .collect::<Vec<_>>();
 
-    let mut guids = HashSet::<Uuid>::new();
-    let data = data
-        .into_iter()
-        .map(|result| {
-            result.map(|(archive, r#mod)| {
-                let guid = r#mod.guid();
-                if guids.insert(guid) {
-                    Ok((archive, r#mod))
-                } else {
-                    anyhow_tauri::bail!("already adding mod with GUID {{{}}}", guid)
-                }
-            })
-            .flatten()
-        })
-        .collect::<Vec<_>>();
+    let mut installed_guids: HashSet<Uuid> = mods.iter().map(|m| m.guid()).collect();
+    let data = reject_duplicate_guids(data, &mut installed_guids, "a mod with this GUID is already installed");
 
-    let data = futures::future::join_all(
-        data.into_iter().map(|result| async {
-            match result {
-                Ok((archive, r#mod)) => {
-                    extract_archive(archive, r#mod.directory.clone()).await?;
-                    Ok(r#mod)
-                }
-                Err(e) => Err(e)
-            }
-        })
-    ).await;
+    let mut batch_guids = HashSet::<Uuid>::new();
+    let data = reject_duplicate_guids(data, &mut batch_guids, "this GUID is already being added in this batch");
 
-    let data = futures::future::join_all(
-        data.into_iter().map(|result| async {
-            match result {
-                Ok(mut r#mod) => {
-                    if let Err(e) = r#mod.normalize_paths().await {
-                        log::error!("Path normalization failed for \"{}\": {}", r#mod.guid(), e);
-                    }
-                    Ok(r#mod)
-                }
-                Err(e) => Err(e)
-            }
-        })
-    ).await;
+    let data = futures::future::join_all(data.into_iter().map(|result| async {
+        let (archive, r#mod) = result?;
+        extract_archive(archive, r#mod.directory.clone()).await?;
+        Ok::<_, TACommandError>(r#mod)
+    })).await;
+
+    let data = futures::future::join_all(data.into_iter().map(|result| async {
+        let mut r#mod = result?;
+        if let Err(e) = r#mod.normalize_paths().await {
+            log::error!("Path normalization failed for \"{}\": {}", r#mod.guid(), e);
+        }
+        Ok::<_, TACommandError>(r#mod)
+    })).await;
 
     for r#mod in data.iter().flatten() {
         mods.push(r#mod.clone());
     }
-    
+
     Ok(data)
 }
 

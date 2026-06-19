@@ -81,3 +81,30 @@ pub struct ProfilesConfig {
     pub profiles: Vec<Profile>,
     pub active: u64,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_exposes_uuid_and_enabled() {
+        let id = Uuid::from_u128(1);
+        let legacy = Config::Legacy { guid: id, enabled: false, selected: 0 };
+        assert_eq!(legacy.uuid(), &id);
+        assert!(!legacy.enabled());
+
+        let v1 = Config::V1 { guid: id, enabled: true, toggled: vec![true], selected: vec![0] };
+        assert_eq!(v1.uuid(), &id);
+        assert!(v1.enabled());
+
+        let v2 = Config::V2 { guid: id, enabled: true, toggled: vec![], selected: vec![] };
+        assert!(v2.enabled());
+    }
+
+    #[test]
+    fn profile_accessors() {
+        let p = Profile::new("Default");
+        assert_eq!(p.name(), "Default");
+        assert!(p.configs().is_empty());
+    }
+}
