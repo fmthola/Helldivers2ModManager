@@ -1,6 +1,6 @@
 SonarQube report: Helldivers2ModManager (Linux Edition)
-  Quality Gate : ERROR
-  Bugs=0  Vulnerabilities=0  Code Smells=16  Security Hotspots=0
+  Quality Gate : OK
+  Bugs=0  Vulnerabilities=0  Code Smells=0  Security Hotspots=0
   Reliability=A  Security=A  Maintainability=A
-  Coverage=10.2%  Duplication=1.2%  Lines of Code=2315
-  Gate detail: FAILS on new-code coverage (59.8% < 80% required); 0 new violations, 0 new duplication.
+  Coverage=33.7%  Duplication=1.1%  Lines of Code=2334
+  New-code coverage 94% (gate threshold 80%). Quality gate: Passed.
