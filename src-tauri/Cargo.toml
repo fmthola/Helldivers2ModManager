@@ -25,7 +25,7 @@ rand = "0.10"
 uuid = { version = "1.23", features = ["serde", "v4"] }
 tokio = { version = "1.52", features = ["fs"] }
 anyhow = "1.0"
-anyhow-tauri = "1.0"
+anyhow-tauri = { version = "1.0", features = ["show_errs_in_release"] }
 zip = "8.5"
 sevenz-rust2 = { version = "0.20", features = ["util"] }
 unrar = "0.5"
