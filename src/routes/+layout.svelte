@@ -19,7 +19,7 @@
         });
         window.addEventListener("unhandledrejection", (e) => {
             const r = e.reason;
-            logError(`unhandled rejection: ${r?.stack ?? r?.message ?? String(r)}`);
+            logError(`unhandled rejection: ${r?.message ?? r?.stack ?? String(r)}`);
         });
 
         await initLocalization("en");
