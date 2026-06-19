@@ -24,6 +24,7 @@ src-tauri/settings.json
 *.lcov
 lcov.info
 src-tauri/lcov.info
+coverage/
 
 # Temporary files
 *.tmp

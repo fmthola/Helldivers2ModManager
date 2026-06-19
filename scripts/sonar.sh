@@ -37,6 +37,12 @@ else
   echo ">> cargo-llvm-cov not installed; skipping coverage"
 fi
 
+# Frontend coverage (vitest -> coverage/lcov.info).
+if command -v pnpm >/dev/null 2>&1; then
+  echo ">> generating frontend coverage"
+  pnpm exec vitest run --coverage >/dev/null 2>&1 || echo ">> vitest coverage failed (continuing)"
+fi
+
 # Pick a podman runner: host podman, or through distrobox.
 if command -v podman >/dev/null 2>&1; then
   RUNNER=(podman)
