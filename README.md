@@ -3,57 +3,15 @@
 A Linux-focused fork of [teutinsa/Helldivers2ModManager](https://github.com/teutinsa/Helldivers2ModManager),
 a mod manager for the game Helldivers 2.
 
-The upstream project targets Windows. This fork tracks it as `upstream` and adds
-Linux support (Steam/Proton path detection, native packaging) **without breaking
-Windows behavior**. The preview3 rewrite is built on [Tauri 2](https://tauri.app/)
-(Rust + Svelte), which is cross-platform, so the goal here is enablement and
-validation rather than a rewrite.
+Upstream targets Windows. This fork adds Linux support (Steam/Proton path
+detection, native packaging) without breaking Windows behavior, built on
+[Tauri 2](https://tauri.app/) (Rust + Svelte). Built and verified on
+[Bazzite](https://bazzite.gg/); it runs natively on Linux — no distrobox needed
+to run it.
 
-> Read about the original project on the upstream [website](https://teutinsa.github.io/hd2mm-site/index.html).
-
-## Code status
-
-Last full run: 2026-06-19. Produced by the local suite in [`docs/TESTING.md`](docs/TESTING.md).
-Raw artifacts: [`docs/evidence/`](docs/evidence/).
-
-| Check | Result |
-| --- | --- |
-| SonarQube quality gate | ❌ Failed — on coverage (see below) |
-| Vulnerabilities | 0 |
-| Security rating | A |
-| Security hotspots | 0 |
-| Bugs | 0 |
-| Reliability rating | A |
-| Maintainability rating | A |
-| Code smells (open, not yet fixed) | 16 |
-| Coverage (overall) | 10.2% |
-| Coverage (new code) | 59.8% (gate needs ≥ 80%) |
-| Rust unit tests | 11 / 11 pass |
-| Frontend build | ✅ Clean |
-| App launches (E2E) | ✅ |
-
-The gate is red. It fails one condition: coverage on new code (59.8%) is below the
-required 80%. Security and reliability are clean: 0 vulnerabilities, 0 bugs, A
-ratings. Raising coverage is open work — see
-[Validation and DevSecOps](#validation-and-devsecops).
-
-### SonarQube dashboard
-
-Captured from the running SonarQube server.
-
-![SonarQube dashboard: quality gate Failed on coverage, 0 bugs, 0 vulnerabilities, security A](docs/evidence/sonar-dashboard.png)
-
-Open findings, not yet acted on (e.g. "Refactor this function to reduce its Cognitive
-Complexity from 81 to the 15 allowed"):
-
-![SonarQube open issues, sorted by severity](docs/evidence/sonar-issues.png)
-
-More: [measures](docs/evidence/sonar-measures.png) · [running app window](docs/evidence/e2e-app-window.png).
+> Original project [website](https://teutinsa.github.io/hd2mm-site/index.html).
 
 ## Quick start — install and apply a mod
-
-Runs natively on Linux (built and verified on Bazzite). No distrobox is needed to
-run it; the distrobox is only for building.
 
 ### 1. Get the app
 
@@ -70,7 +28,7 @@ chmod +x HD2ModManager.AppImage
 If it does not start by double-click (no FUSE), run:
 `APPIMAGE_EXTRACT_AND_RUN=1 ./HD2ModManager.AppImage`.
 
-To add it to your app menu, run the app once, then from a clone of this repo:
+To add it to your app menu, run the app once, then from a clone of this repo run
 `scripts/install.sh` (copies it to `~/.local/bin` and adds a "Helldivers 2 Mod
 Manager" launcher).
 
@@ -95,10 +53,12 @@ active profile (the left list).
 On the mod in the profile, click the **pencil** button. Pick the variant in the
 dropdown (e.g. Blue Glowing / Purple No-glow), then **OK**.
 
-### 6. Deploy
+### 6. Deploy and play
 
-Click **Deploy**. The selected variant's patch files are copied into
-`…/Helldivers 2/data/`. Then click **Launch** (or start the game from Steam).
+Click **Deploy** — the selected variant's patch files are copied into
+`…/Helldivers 2/data/`. Then click **Launch**, which starts Helldivers 2 through
+Steam (validated — see the proof below). Modding can carry anti-cheat risk;
+**Purge** before playing if you are unsure.
 
 ### 7. Remove mods (revert)
 
@@ -107,51 +67,43 @@ Click **Purge** to remove all deployed mod files and return the game to vanilla.
 
 ### Proof — a deployed mod running in-game on Bazzite
 
-The "Super Credit Arrows" mod (Blue Glowing) deployed with the steps above, shown
-in Helldivers 2 (the glowing blue arrow marks a Super Credit pile):
+The "Super Credit Arrows" mod (Blue Glowing) deployed with the steps above, then
+launched, running in Helldivers 2 (the glowing blue arrow marks a Super Credit
+pile):
 
 ![Super Credit Arrows mod running in Helldivers 2 on Bazzite](docs/evidence/in-game-bazzite.jpg)
 
 ## Status
 
-🚧 **Early / preview.** Based on the upstream `v2.0.0.0_preview3` tag. Builds and
-launches on Linux; broader validation is in progress (see
-[Validation Reports](#validation-reports)).
+🚧 **Early / preview.** Based on the upstream `v2.0.0.0_preview3` tag.
 
 | Area | State |
 | --- | --- |
-| Build on Linux (Tauri) | ✅ Builds (`pnpm tauri build`) |
+| Install + run on Linux (AppImage) | ✅ Native, no distrobox |
+| Steam library auto-detection (incl. Flatpak) | ✅ Confirmed |
+| Add mod (`.zip`) + choose options | ✅ Confirmed |
+| Deploy / purge mods (non-destructive) | ✅ Confirmed |
+| Launch Helldivers 2 (modded) via Steam | ✅ Confirmed (in-game proof above) |
 | AppImage / `.deb` packaging | ✅ Produced |
-| Steam library auto-detection (incl. Flatpak Steam) | ✅ Confirmed via E2E |
-| App launches and renders on Linux | ✅ Confirmed via E2E |
-| Deploy / purge mods (patch files into `data/`) | ⏳ Pending end-to-end validation |
-| Legacy & V1 manifest mods | ➖ Inherited from upstream (untested on Linux) |
+| Add mod from `.7z` / `.rar` | ⏳ Not yet exercised |
+| Legacy & V1 manifest mods | ➖ Inherited from upstream |
 | V2 manifest mods | ❌ Not implemented upstream yet (`todo!()`) |
 
-Testing process and evidence: [`docs/TESTING.md`](docs/TESTING.md).
+How it was tested, with the full evidence, is at the bottom of this file.
 
-Fixed: the Settings page used to report "Game path is invalid!" for a valid
-install, because the webview's `fs`/`path` calls threw under the capability
-scope. Path validation now runs in the Rust backend (`validate_game_path`) and
-is covered by tests, including a path-with-spaces case.
+---
 
-## Development environment
-
-This fork is being developed and tested on **[Bazzite](https://bazzite.gg/)**
-(a Fedora atomic, gaming-focused immutable distribution). Because the host is
-immutable, the toolchain runs inside an **Ubuntu [distrobox](https://distrobox.it/)
-container**, which keeps build dependencies isolated from the core host system.
-Helldivers 2 itself runs on the host via **Steam + Proton**.
-
-If you build on a different distribution, the steps below should still apply —
-please consider contributing a [validation report](#validation-reports).
+The sections below are for review and validation: how modding works, how to build
+it, and the testing, security, and DevSecOps process behind the status above.
 
 ## How modding works on Linux
 
 Helldivers 2 runs under Proton. Proton runs the Windows game, which reads the
 same `data/*.patch_*` files on any host OS. Deploying a mod copies patch-file
 triplets (`<hex>.patch_N`, `.patch_N.gpu_resources`, `.patch_N.stream`) into
-`<game>/data/`. Purge removes them.
+`<game>/data/`. Purge removes them. The deploy/purge logic is generic: the asset
+names come from the mod's own files and the patch-file naming convention, not
+from anything hard-coded.
 
 The game install is detected by the presence of `tools/`, `data/`, `bin/`, and
 `bin/helldivers2.exe`. The Windows executable is present under Proton, so
@@ -159,107 +111,118 @@ detection works unchanged.
 
 ## Building from source
 
+A distrobox is only needed to build; running needs nothing but the AppImage.
+
 Requirements: a Rust toolchain, Node.js + `pnpm`, and the Tauri 2 system
 libraries (`webkit2gtk-4.1`, GTK 3, `libsoup-3.0`, `librsvg`, etc.).
 
 ```bash
-# install JS deps
 pnpm install
-
-# dev (hot reload)
-pnpm tauri dev
-
-# release build + bundles (AppImage + .deb)
-pnpm tauri build
+pnpm tauri dev      # dev (hot reload)
+pnpm tauri build    # release build + bundles (AppImage + .deb)
 ```
 
-Artifacts are written to `src-tauri/target/release/bundle/`.
+Artifacts are written to `src-tauri/target/release/bundle/`. To install the built
+AppImage to the app menu: `scripts/install.sh`. The AppImage bundles GTK/WebKit
+and stores its data under `~/.local/share/hd2mm`; verified on Bazzite (host glibc
+2.43, FUSE present).
 
-## Running
+## Development environment
 
-A distrobox is only needed to build. The AppImage runs on the host directly: it
-bundles GTK/WebKit and stores its data under `~/.local/share/hd2mm`. Verified on
-Bazzite (host glibc 2.43, FUSE present).
+Developed and tested on **[Bazzite](https://bazzite.gg/)** (Fedora atomic,
+immutable). Because the host is immutable, the build toolchain runs inside an
+**Ubuntu [distrobox](https://distrobox.it/)** container, isolated from the host.
+Helldivers 2 runs on the host via **Steam + Proton**. The app itself runs on the
+host, not in the container.
 
-Install it to the application menu:
+## Code status
 
-```bash
-scripts/install.sh
-```
+Last full run: 2026-06-19. Produced by the local suite in [`docs/TESTING.md`](docs/TESTING.md).
+Raw artifacts: [`docs/evidence/`](docs/evidence/).
 
-This copies the AppImage to `~/.local/bin` and adds a "Helldivers 2 Mod Manager"
-menu entry. Or run it straight from the bundle:
+| Check | Result |
+| --- | --- |
+| SonarQube quality gate | ❌ Failed — on coverage (see below) |
+| Vulnerabilities | 0 |
+| Security rating | A |
+| Security hotspots | 0 |
+| Bugs | 0 |
+| Reliability rating | A |
+| Maintainability rating | A |
+| Code smells (open, not yet fixed) | 16 |
+| Coverage (overall) | 10.2% |
+| Coverage (new code) | 59.8% (gate needs ≥ 80%) |
+| Rust unit tests | 11 / 11 pass |
+| App launches (E2E) | ✅ |
 
-```bash
-./src-tauri/target/release/bundle/appimage/hd2mm_*_amd64.AppImage
-# no FUSE available (e.g. inside a container):
-APPIMAGE_EXTRACT_AND_RUN=1 ./hd2mm_*_amd64.AppImage
-```
+The gate is red on one condition: coverage on new code (59.8%) is below the
+required 80%. Security and reliability are clean (0 vulnerabilities, 0 bugs, A
+ratings). Raising coverage is open work.
 
-On first launch, open **Settings** — the game path should auto-detect from your
-Steam libraries (e.g. `~/.local/share/Steam/steamapps/common/Helldivers 2`).
-Then add mods and **Deploy**.
+### SonarQube dashboard
+
+Captured from the running SonarQube server.
+
+![SonarQube dashboard: quality gate Failed on coverage, 0 bugs, 0 vulnerabilities, security A](docs/evidence/sonar-dashboard.png)
+
+Open findings, not yet acted on (e.g. "Refactor this function to reduce its Cognitive
+Complexity from 81 to the 15 allowed"):
+
+![SonarQube open issues, sorted by severity](docs/evidence/sonar-issues.png)
+
+More: [measures](docs/evidence/sonar-measures.png) · [running app window](docs/evidence/e2e-app-window.png).
 
 ## Validation Reports
 
-> This section will hold structured reports from Linux testing. It is intentionally
-> scaffolded ahead of the testing work — entries will be filled in as validation
-> is performed.
-
 ### Tested environments
 
-| Date | Distro / kernel | Steam type | Proton | HD2 build | Result | Notes |
-| --- | --- | --- | --- | --- | --- | --- |
-| 2026-06-19 | Bazzite host + Ubuntu distrobox | Native | _tbd_ | preview3 | 🟡 Partial | build + launch + detection confirmed; mod deploy pending |
+| Date | Distro / kernel | Steam type | HD2 build | Result | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 2026-06-19 | Bazzite host + Ubuntu distrobox | Native | preview3 | ✅ | install, detect, add, options, deploy, purge, launch all confirmed |
 
 ### Test checklist
 
 - [x] App builds from source on Linux
 - [x] App launches and renders (E2E, `docs/evidence/e2e-app-window.png`)
+- [x] AppImage runs natively on the Bazzite host
 - [x] Game path auto-detected (native Steam)
-- [x] Path-traversal guard logic unit-tested
 - [x] Game-path validation passes for a valid install (Rust-backed)
-- [x] AppImage launches on the Bazzite host
+- [x] Path-traversal guard logic unit-tested
 - [x] Window close button works
-- [ ] `.deb` installs/runs in a Debian/Ubuntu environment
-- [ ] Game path auto-detected (Flatpak Steam)
-- [ ] Game path auto-detected (mod on second drive via `libraryfolders.vdf`)
-- [x] Add mod from `.zip` (lands in the library; UI now notifies + opens it)
+- [x] Add mod from `.zip` (lands in the library; UI notifies + opens it)
 - [x] Mod options shown and selectable in the UI (`docs/evidence/e2e-options.png`)
 - [x] Deploy writes the selected option's patch files into `<game>/data/`
 - [x] Purge removes deployed patch files and restores the baseline
+- [x] Game launches modded via Steam (`steam://launch/553850`) — in-game proof above
+- [ ] `.deb` installs/runs in a Debian/Ubuntu environment
+- [ ] Game path auto-detected (Flatpak Steam)
+- [ ] Game path auto-detected (mod on second drive via `libraryfolders.vdf`)
 - [ ] Add mod from `.7z`
 - [ ] Add mod from `.rar`
-- [ ] Game launches modded via Steam (`steam://launch/553850`)
 
 ### Report log
 
-**2026-06-19 — initial bring-up.** Rust unit tests: 11 passing. Frontend build:
-clean. App E2E: launched via `tauri-driver`, UI rendered, screenshot captured.
-Steam auto-detection: confirmed (path pre-filled in the screenshot). SonarQube:
-0 bugs, 0 vulnerabilities, ratings A/A/A; coverage added (10.2% overall), so the
-gate now fails on new-code coverage (59.8% < 80%). Artifacts in
-[`docs/evidence/`](docs/evidence/). Fixed this round: game-path validation moved
-to Rust (the Settings error is gone); AppImage runs on the host (writable data
-dir); WebKit black-screen on NVIDIA. Open: low coverage; 4 cognitive-complexity
-smells; mod deploy/purge not yet exercised with a real mod.
+**2026-06-19 — initial bring-up.** Rust unit tests pass. Frontend build clean. App
+E2E: launched via `tauri-driver`, UI rendered, screenshot captured. Steam
+auto-detection confirmed. SonarQube: 0 bugs, 0 vulnerabilities, ratings A/A/A;
+coverage added (10.2% overall), so the gate fails on new-code coverage (59.8% <
+80%). Fixed: game-path validation moved to Rust (the Settings error is gone);
+AppImage runs on the host (writable data dir); WebKit black-screen on NVIDIA.
 
-**2026-06-19 — regression vs upstream.** Ran the same checks against this fork and
-a clean upstream build (see [`docs/evidence/regression.txt`](docs/evidence/regression.txt)).
-Render, minimize, and settings-page close are identical. The window close button
-on the main page was broken in upstream too (not a regression here); fixed in this
-fork via `preventDefault` + `destroy()` after saving profiles. Search filters by
-name/description and needs a mod present to show an effect.
+**2026-06-19 — regression vs upstream.** Same checks run against this fork and a
+clean upstream build ([`docs/evidence/regression.txt`](docs/evidence/regression.txt)).
+Render, minimize, and settings-page close are identical. The main-page window
+close button was broken in upstream too (not a regression here); fixed via
+`preventDefault` + `destroy()` after saving profiles.
 
-**2026-06-19 — mod deploy/purge.** Added SuperCreditArrows.zip and ran a full
-deploy/purge round-trip against the real game install
+**2026-06-19 — mod deploy/purge + launch.** Added SuperCreditArrows.zip and ran a
+full deploy/purge round-trip against the real game install
 ([`docs/evidence/deploy-test.txt`](docs/evidence/deploy-test.txt)). Backup first:
 the data dir baseline was snapshotted and a standalone `scripts/revert-mods.sh`
 added; deploy only adds files and the base game has no matching patch files, so it
-is non-destructive. Deploy wrote the selected option's patch files into `data/`;
-purge removed them and the dir matched the baseline exactly. The mod's options are
-shown and selectable in the UI ([`docs/evidence/e2e-options.png`](docs/evidence/e2e-options.png)).
-Single-mod add now shows a notification and opens the library so it is visible.
+is non-destructive. Deploy wrote the selected option's patch files; purge removed
+them and the dir matched the baseline exactly. The game was then launched and the
+mod is visible in-game ([`docs/evidence/in-game-bazzite.jpg`](docs/evidence/in-game-bazzite.jpg)).
 
 ## Validation and DevSecOps
 
@@ -267,7 +230,7 @@ Development is local. There is no CI service. The pipeline is plain shell script
 Secrets and the SonarQube URL are read from the local credential store (KWallet)
 at run time and are never stored in the repo.
 
-The four stages, and how each one keeps the code valid and secure:
+The four stages, and how each keeps the code valid and secure:
 
 ### Build
 
@@ -288,13 +251,13 @@ pnpm run build:checked     # i18n + frontend type/compile check
 - **Rust unit tests** cover the security-relevant logic: the archive
   path-traversal guard, install validation, and patch-file matching.
 - **App E2E** drives the real packaged binary through `tauri-driver` +
-  `WebKitWebDriver` and screenshots it. This is not Playwright; Playwright
-  cannot drive a Tauri window.
+  `WebKitWebDriver` and screenshots it. Playwright is not used; it cannot drive a
+  Tauri window.
 
 ### Scan
 
 ```bash
-scripts/sonar.sh          # coverage + SonarQube scan + quality-gate check
+scripts/sonar.sh           # coverage + SonarQube scan + quality-gate check
 scripts/sonar-evidence.sh  # capture the SonarQube UI screenshots
 ```
 
@@ -303,30 +266,25 @@ hotspots, and code smells, and imports test **coverage**. The quality gate is th
 go/no-go signal. The loop is: scan → read the gate and issues → fix → re-scan,
 until it is green.
 
-**Why coverage matters here.** Static analysis only flags what it can see. Coverage
-shows how much of the code the tests actually exercise. Low coverage means large
-parts of the code are unproven, so "0 bugs found" is weaker than it looks. That is
-why the gate includes a coverage condition, and why the gate is currently red: new-code
-coverage is 59.8%, below the 80% the gate requires. Security and reliability are
-clean; coverage is the open gap.
+**Why coverage matters.** Static analysis only flags what it can see. Coverage
+shows how much of the code the tests exercise. Low coverage means large parts are
+unproven, so "0 bugs found" is weaker than it looks. The gate includes a coverage
+condition, and it is currently red because new-code coverage is 59.8% (below 80%).
+Security and reliability are clean; coverage is the open gap.
 
 ### Deploy
 
-Release artifacts (AppImage, `.deb`) are built by `scripts/build.sh`. They are held
-back from distribution until end-to-end mod testing on a real install passes (see
-[Validation Reports](#validation-reports)).
+Release artifacts (AppImage, `.deb`) are built by `scripts/build.sh` and published
+to GitHub Releases once end-to-end mod testing on a real install passes.
 
 ### Security fixes and open findings
 
 - **Fixed:** a path-traversal (zip-slip) flaw in 7z/RAR extraction. A crafted
-  archive could write outside the mod directory. See commit `fix: prevent path
-  traversal (zip-slip) in 7z/RAR extraction`, covered by unit tests.
+  archive could write outside the mod directory. Covered by unit tests.
 - **Open, not yet acted on** (visible in [`docs/evidence/sonar-issues.png`](docs/evidence/sonar-issues.png)):
   4 cognitive-complexity refactors (`deploy`, `add_mods`, `normalize_paths`,
   `validate`), other minor smells, and low coverage. Further hardening (CSP,
   manifest asset path validation) is also tracked.
-
-Current numbers are in [Code status](#code-status), sourced from `docs/evidence/`.
 
 > ⚠️ Modding online games can carry risk with anti-cheat. Use at your own
 > discretion and purge mods before playing if unsure.
