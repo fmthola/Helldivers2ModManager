@@ -156,7 +156,9 @@ Then add mods and **Deploy**.
 - [x] App launches and renders (E2E, `docs/evidence/e2e-app-window.png`)
 - [x] Game path auto-detected (native Steam)
 - [x] Path-traversal guard logic unit-tested
-- [ ] AppImage launches on the Bazzite host
+- [x] Game-path validation passes for a valid install (Rust-backed)
+- [x] AppImage launches on the Bazzite host
+- [x] Window close button works
 - [ ] `.deb` installs/runs in a Debian/Ubuntu environment
 - [ ] Game path auto-detected (Flatpak Steam)
 - [ ] Game path auto-detected (mod on second drive via `libraryfolders.vdf`)
@@ -178,6 +180,13 @@ gate now fails on new-code coverage (59.8% < 80%). Artifacts in
 to Rust (the Settings error is gone); AppImage runs on the host (writable data
 dir); WebKit black-screen on NVIDIA. Open: low coverage; 4 cognitive-complexity
 smells; mod deploy/purge not yet exercised with a real mod.
+
+**2026-06-19 — regression vs upstream.** Ran the same checks against this fork and
+a clean upstream build (see [`docs/evidence/regression.txt`](docs/evidence/regression.txt)).
+Render, minimize, and settings-page close are identical. The window close button
+on the main page was broken in upstream too (not a regression here); fixed in this
+fork via `preventDefault` + `destroy()` after saving profiles. Search filters by
+name/description and needs a mod present to show an effect.
 
 ## Validation and DevSecOps
 

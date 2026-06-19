@@ -1,0 +1,32 @@
+Regression comparison — this fork vs pristine upstream (tag v2.0.0.0_preview3).
+Driven by e2e/regression.test.mjs through tauri-driver. Date: 2026-06-19.
+
+Method: same checks run against both binaries. Upstream built from a clean
+worktree at commit 65b16b5.
+
+Settings page (no saved settings; no onCloseRequested handler):
+  MINE     : renders=true close_present=true close_works=true
+  UPSTREAM : renders=true close_present=true close_works=true
+
+Main page (valid saved settings; onCloseRequested handler active):
+  UPSTREAM      : renders=true close_works=FALSE   <- pre-existing upstream bug
+  MINE (before) : renders=true close_works=FALSE   <- same; not a regression
+  MINE (after)  : renders=true close_works=TRUE    <- fixed in this fork
+
+Findings:
+  - Window close on the main page did not work in upstream OR this fork before
+    the fix. It is an upstream bug, not a regression from this fork's changes.
+  - Fix: the main page's onCloseRequested handler now calls preventDefault(),
+    saves profiles, then appWindow.destroy(). Capability gains
+    core:window:allow-destroy.
+  - Game-path validation: this fork validates in Rust (validate_game_path) and
+    no longer shows a false "invalid" error; upstream throws in the webview.
+  - Search: filters mods by name/description. With no mods installed there is
+    nothing to filter, which looks like "search does nothing". Not a bug.
+  - Render, minimize, and settings-page close: identical in both.
+
+Scope check: git diff vs upstream touches only the archive guard, settings
+detection/validation, lib.rs (data dir, WebKit flag, command registration),
+tauri.conf bundling, css, stringExtensions, and the settings page. It does not
+touch the titlebar, main page, search, nav, or popups — so those behave as
+upstream, confirmed above.
