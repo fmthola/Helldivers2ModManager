@@ -85,7 +85,7 @@ async function main() {
 
     const png = await driver.takeScreenshot();
     writeFileSync(shot, Buffer.from(png, "base64"));
-    console.log(`screenshot: ${shot}`);
+    console.log("screenshot: docs/evidence/e2e-app-window.png");
 
     if (found.length === 0) {
       console.error(`--- body innerText (first 600 chars) ---\n${bodyText.slice(0, 600)}\n---`);

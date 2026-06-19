@@ -4,18 +4,21 @@
 // here. This is separate from the app E2E, which uses tauri-driver.
 //
 // Requirements:
-//   - A reachable SonarQube server (default http://localhost:9000).
+//   - A reachable SonarQube server.
 //   - Playwright + a chromium build available to Node.
-//   - Admin password in SONAR_ADMIN_PASSWORD.
 //
-// Env overrides:
-//   SONAR_HOST_URL        default http://localhost:9000
+// The server URL and admin password are injected from the local credential
+// store by scripts/sonar-evidence.sh (the preferred entry point). They are
+// never hardcoded here.
+//
+// Env (all supplied by scripts/sonar-evidence.sh):
+//   SONAR_HOST_URL        required
+//   SONAR_ADMIN_PASSWORD  required
 //   SONAR_PROJECT_KEY     default helldivers2modmanager-linux
 //   SONAR_ADMIN_USER      default admin
-//   SONAR_ADMIN_PASSWORD  required
 //   PLAYWRIGHT_REQUIRE_BASE  dir to resolve the 'playwright' module from
 //
-// Run: SONAR_ADMIN_PASSWORD=... node scripts/capture-sonar-evidence.mjs
+// Run: scripts/sonar-evidence.sh
 
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
@@ -39,13 +42,18 @@ function loadChromium() {
 }
 const chromium = loadChromium();
 
-const HOST = process.env.SONAR_HOST_URL || "http://localhost:9000";
+const HOST = process.env.SONAR_HOST_URL;
 const KEY = process.env.SONAR_PROJECT_KEY || "helldivers2modmanager-linux";
 const USER = process.env.SONAR_ADMIN_USER || "admin";
 const PASS = process.env.SONAR_ADMIN_PASSWORD;
 
+// URL and password are injected from the credential store by scripts/sonar-evidence.sh.
+if (!HOST) {
+  console.error("SONAR_HOST_URL is required (use scripts/sonar-evidence.sh)");
+  process.exit(2);
+}
 if (!PASS) {
-  console.error("SONAR_ADMIN_PASSWORD is required");
+  console.error("SONAR_ADMIN_PASSWORD is required (use scripts/sonar-evidence.sh)");
   process.exit(2);
 }
 
@@ -76,7 +84,7 @@ try {
   console.log("logged in");
 
   await shot(`/dashboard?id=${KEY}`, "sonar-dashboard.png");
-  await shot(`/project/issues?id=${KEY}&resolved=false`, "sonar-issues.png");
+  await shot(`/project/issues?id=${KEY}&resolved=false&s=SEVERITY&asc=false`, "sonar-issues.png");
   await shot(`/component_measures?id=${KEY}`, "sonar-measures.png");
 } finally {
   await browser.close();
