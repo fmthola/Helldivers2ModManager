@@ -14,7 +14,7 @@ validation rather than a rewrite.
 ## Code status
 
 Last full run: 2026-06-19. Produced by the local suite in [`docs/TESTING.md`](docs/TESTING.md).
-Raw artifacts: [`docs/evidence/`](docs/evidence/). Numbers are read from the run, not asserted.
+Raw artifacts: [`docs/evidence/`](docs/evidence/).
 
 | Check | Result |
 | --- | --- |
@@ -32,14 +32,14 @@ Raw artifacts: [`docs/evidence/`](docs/evidence/). Numbers are read from the run
 | Frontend build | ✅ Clean |
 | App launches (E2E) | ✅ |
 
-The gate is **red on purpose**, not hidden. It fails one condition: coverage on new
-code (59.8%) is below the required 80%. Security and reliability are clean (0
-vulnerabilities, 0 bugs, A ratings). Raising coverage is open work — see
+The gate is red. It fails one condition: coverage on new code (59.8%) is below the
+required 80%. Security and reliability are clean: 0 vulnerabilities, 0 bugs, A
+ratings. Raising coverage is open work — see
 [Validation and DevSecOps](#validation-and-devsecops).
 
 ### SonarQube dashboard
 
-Captured from the running SonarQube server, not a badge.
+Captured from the running SonarQube server.
 
 ![SonarQube dashboard: quality gate Failed on coverage, 0 bugs, 0 vulnerabilities, security A](docs/evidence/sonar-dashboard.png)
 
@@ -68,9 +68,10 @@ launches on Linux; broader validation is in progress (see
 
 Testing process and evidence: [`docs/TESTING.md`](docs/TESTING.md).
 
-Known issue: the Settings page reports "Game path is invalid!" for a valid
-install. The Rust-side check passes; the frontend `fs`/`path` call throws. A
-Tauri capability/permission gap is the likely cause. Under investigation.
+Fixed: the Settings page used to report "Game path is invalid!" for a valid
+install, because the webview's `fs`/`path` calls threw under the capability
+scope. Path validation now runs in the Rust backend (`validate_game_path`) and
+is covered by tests, including a path-with-spaces case.
 
 ## Development environment
 
@@ -114,11 +115,22 @@ Artifacts are written to `src-tauri/target/release/bundle/`.
 
 ## Running
 
-The AppImage is self-contained (bundles GTK/WebKit):
+A distrobox is only needed to build. The AppImage runs on the host directly: it
+bundles GTK/WebKit and stores its data under `~/.local/share/hd2mm`. Verified on
+Bazzite (host glibc 2.43, FUSE present).
+
+Install it to the application menu:
 
 ```bash
-./hd2mm_*_amd64.AppImage
-# inside a container without FUSE:
+scripts/install.sh
+```
+
+This copies the AppImage to `~/.local/bin` and adds a "Helldivers 2 Mod Manager"
+menu entry. Or run it straight from the bundle:
+
+```bash
+./src-tauri/target/release/bundle/appimage/hd2mm_*_amd64.AppImage
+# no FUSE available (e.g. inside a container):
 APPIMAGE_EXTRACT_AND_RUN=1 ./hd2mm_*_amd64.AppImage
 ```
 
@@ -162,9 +174,10 @@ clean. App E2E: launched via `tauri-driver`, UI rendered, screenshot captured.
 Steam auto-detection: confirmed (path pre-filled in the screenshot). SonarQube:
 0 bugs, 0 vulnerabilities, ratings A/A/A; coverage added (10.2% overall), so the
 gate now fails on new-code coverage (59.8% < 80%). Artifacts in
-[`docs/evidence/`](docs/evidence/). Open: low coverage; 4 cognitive-complexity
-smells; frontend game-path validation error (see Known issue above); mod
-deploy/purge not yet exercised with a real mod.
+[`docs/evidence/`](docs/evidence/). Fixed this round: game-path validation moved
+to Rust (the Settings error is gone); AppImage runs on the host (writable data
+dir); WebKit black-screen on NVIDIA. Open: low coverage; 4 cognitive-complexity
+smells; mod deploy/purge not yet exercised with a real mod.
 
 ## Validation and DevSecOps
 

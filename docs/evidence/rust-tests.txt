@@ -1,4 +1,5 @@
 warning: unused manifest key: target.x86_64-pc-windows-gnu.linker
+   Compiling hd2mm v2.0.0-preview3 (src-tauri)
 warning: unused import: `do_check_settings`
  --> src/commands/mod.rs:7:44
   |
@@ -44,21 +45,27 @@ warning: method `zip` is never used
    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
 
 warning: `hd2mm` (lib test) generated 6 warnings (run `cargo fix --lib -p hd2mm --tests` to apply 5 suggestions)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.24s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.58s
      Running unittests src/lib.rs (src-tauri/target/debug/deps/hd2mm_lib-2f7c4cf0249d44c5)
 
-running 11 tests
-test archive::tests::rejects_traversal_and_absolute_paths ... ok
+running 17 tests
 test archive::tests::allows_normal_relative_paths ... ok
-test models::settings::tests::skip_entry_lookup ... ok
+test archive::tests::rejects_traversal_and_absolute_paths ... ok
+test models::settings::tests::check_empty_path ... ok
 test models::settings::tests::empty_path_fails ... ok
+test models::settings::tests::check_nonexistent_path ... ok
+test models::settings::tests::skip_entry_lookup ... ok
+test models::settings::tests::check_reports_multiple_missing ... ok
+test models::settings::tests::check_path_with_spaces_is_valid ... ok
 test models::settings::tests::missing_path_fails ... ok
-test models::settings::tests::valid_install_passes ... ok
+test models::settings::tests::check_valid_path_has_no_errors ... ok
 test models::settings::tests::missing_tools_fails ... ok
 test models::settings::tests::missing_exe_fails ... ok
 test models::settings::tests::missing_data_fails ... ok
+test models::settings::tests::valid_install_passes ... ok
+test models::settings::tests::check_reports_each_missing_piece ... ok
 test commands::tests::rejects_non_patch_names ... ok
 test commands::tests::matches_valid_patch_names ... ok
 
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 

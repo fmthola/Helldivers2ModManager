@@ -56,16 +56,21 @@ pnpm tauri build                       # builds src-tauri/target/release/hd2mm
 Run:
 
 ```bash
-pnpm run test:e2e
+pnpm run test:e2e        # dev binary
+pnpm run test:artifact   # the packaged AppImage
 ```
 
-What it checks:
+What they check:
 
 - App launches.
 - UI renders.
 - Screenshot captured.
 
-Evidence: `docs/evidence/e2e-tests.txt`, `docs/evidence/e2e-app-window.png`.
+`test:e2e` drives the dev binary. `test:artifact` drives the packaged AppImage
+that users actually run (build it first with `scripts/build.sh`).
+
+Evidence: `docs/evidence/e2e-tests.txt`, `docs/evidence/e2e-app-window.png`,
+`docs/evidence/e2e-artifact.txt`, `docs/evidence/e2e-appimage-window.png`.
 
 ## 4. SonarQube loop
 
@@ -131,8 +136,10 @@ All artifacts live in `docs/evidence/`.
 |------|--------|
 | `rust-tests.txt` | Backend tests pass. |
 | `frontend-build.txt` | Frontend compiles. |
-| `e2e-tests.txt` | App launched via WebDriver. |
-| `e2e-app-window.png` | The running window. |
+| `e2e-tests.txt` | Dev binary launched via WebDriver. |
+| `e2e-app-window.png` | The running window (dev binary). |
+| `e2e-artifact.txt` | Packaged AppImage launched. |
+| `e2e-appimage-window.png` | The running window (AppImage). |
 | `sonar-report.txt` | Quality gate result (text). |
 | `sonar-dashboard.png` | Quality gate + ratings (SonarQube UI). |
 | `sonar-issues.png` | Open issues (SonarQube UI). |

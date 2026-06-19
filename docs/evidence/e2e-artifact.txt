@@ -1,0 +1,6 @@
+artifact: src-tauri/target/release/bundle/appimage/hd2mm_2.0.0-preview3_amd64.AppImage
+start: tauri-driver
+connect: webdriver
+matched UI markers: ["Settings"]
+screenshot: docs/evidence/e2e-appimage-window.png
+PASS: AppImage launched and UI rendered
