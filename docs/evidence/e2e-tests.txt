@@ -1,0 +1,10 @@
+start: tauri-driver
+connect: webdriver
+
+
+
+title: "Tauri + SvelteKit + Typescript App"
+body text length: 187
+matched UI markers: ["Settings"]
+screenshot: /var/home/mthola/git/Helldivers2ModManager/docs/evidence/e2e-app-window.png
+PASS: app launched and UI rendered

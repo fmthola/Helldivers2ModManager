@@ -1,0 +1,7 @@
+── SonarQube report: Helldivers2ModManager (Linux Edition) (helldivers2modmanager-linux) ──
+  Quality Gate : ✓ OK
+  Bugs=0  Vulnerabilities=0  Code Smells=16  Security Hotspots=0
+  Ratings: Reliability=A  Security=A  Maintainability=A
+  Coverage=0.0%  Duplication=1.2%  Lines of Code=2257
+  Open issues: 16  (Blocker=0 Critical=4 {'MINOR': 7, 'MAJOR': 5, 'INFO': 0})
+  Dashboard: http://localhost:9000/dashboard?id=helldivers2modmanager-linux

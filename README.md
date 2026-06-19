@@ -21,10 +21,17 @@ launches on Linux; broader validation is in progress (see
 | --- | --- |
 | Build on Linux (Tauri) | ✅ Builds (`pnpm tauri build`) |
 | AppImage / `.deb` packaging | ✅ Produced |
-| Steam library auto-detection (incl. Flatpak Steam) | ✅ Implemented |
+| Steam library auto-detection (incl. Flatpak Steam) | ✅ Confirmed via E2E |
+| App launches and renders on Linux | ✅ Confirmed via E2E |
 | Deploy / purge mods (patch files into `data/`) | ⏳ Pending end-to-end validation |
 | Legacy & V1 manifest mods | ➖ Inherited from upstream (untested on Linux) |
 | V2 manifest mods | ❌ Not implemented upstream yet (`todo!()`) |
+
+Testing process and evidence: [`docs/TESTING.md`](docs/TESTING.md).
+
+Known issue: the Settings page reports "Game path is invalid!" for a valid
+install. The Rust-side check passes; the frontend `fs`/`path` call throws. A
+Tauri capability/permission gap is the likely cause. Under investigation.
 
 ## Development environment
 
@@ -39,15 +46,14 @@ please consider contributing a [validation report](#validation-reports).
 
 ## How modding works on Linux
 
-Helldivers 2 runs under Proton, which executes the real Windows game, so it reads
-the same `data/*.patch_*` files regardless of host OS. "Deploying" a mod simply
-copies patch-file triplets (`<hex>.patch_N`, `.patch_N.gpu_resources`,
-`.patch_N.stream`) into `<game>/data/`; "purge" removes them. No Wine-side
-trickery is required.
+Helldivers 2 runs under Proton. Proton runs the Windows game, which reads the
+same `data/*.patch_*` files on any host OS. Deploying a mod copies patch-file
+triplets (`<hex>.patch_N`, `.patch_N.gpu_resources`, `.patch_N.stream`) into
+`<game>/data/`. Purge removes them.
 
-The game install is detected/validated by the presence of `tools/`, `data/`,
-`bin/`, and `bin/helldivers2.exe` — the Windows executable is still present under
-Proton, so detection works unchanged.
+The game install is detected by the presence of `tools/`, `data/`, `bin/`, and
+`bin/helldivers2.exe`. The Windows executable is present under Proton, so
+detection works unchanged.
 
 ## Building from source
 
@@ -91,34 +97,63 @@ Then add mods and **Deploy**.
 
 | Date | Distro / kernel | Steam type | Proton | HD2 build | Result | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| _pending_ | Bazzite (host) + Ubuntu distrobox | Native | _tbd_ | _tbd_ | ⏳ | initial bring-up |
+| 2026-06-19 | Bazzite host + Ubuntu distrobox | Native | _tbd_ | preview3 | 🟡 Partial | build + launch + detection confirmed; mod deploy pending |
 
 ### Test checklist
 
-- [ ] App builds from source on Linux
+- [x] App builds from source on Linux
+- [x] App launches and renders (E2E, `docs/evidence/e2e-app-window.png`)
+- [x] Game path auto-detected (native Steam)
+- [x] Path-traversal guard logic unit-tested
 - [ ] AppImage launches on the Bazzite host
 - [ ] `.deb` installs/runs in a Debian/Ubuntu environment
-- [ ] Game path auto-detected (native Steam)
 - [ ] Game path auto-detected (Flatpak Steam)
 - [ ] Game path auto-detected (mod on second drive via `libraryfolders.vdf`)
 - [ ] Add mod from `.zip`
 - [ ] Add mod from `.7z`
 - [ ] Add mod from `.rar`
-- [ ] Path-traversal guard rejects a malicious archive (security regression test)
 - [ ] Deploy writes patch files into `<game>/data/`
 - [ ] Purge removes deployed patch files
 - [ ] Game launches modded via Steam (`steam://launch/553850`)
 
 ### Report log
 
-_No reports yet._
+**2026-06-19 — initial bring-up.** Rust unit tests: 11 passing. Frontend build:
+clean. App E2E: launched via `tauri-driver`, UI rendered, screenshot captured.
+Steam auto-detection: confirmed (path pre-filled in the screenshot). SonarQube:
+quality gate pass, 0 bugs, 0 vulnerabilities, ratings A/A/A. Artifacts in
+[`docs/evidence/`](docs/evidence/). Open: frontend game-path validation error
+(see Known issue above); mod deploy/purge not yet exercised with a real mod.
 
-## Security
+## Security and validation
 
-A path-traversal (zip-slip) vulnerability in 7z/RAR extraction was fixed in this
-fork (a crafted archive could write outside the mod directory). See commit
-`fix: prevent path traversal (zip-slip) in 7z/RAR extraction`. Additional
-hardening notes (CSP, manifest asset paths) are tracked for future work.
+A path-traversal (zip-slip) flaw in 7z/RAR extraction was fixed in this fork. A
+crafted archive could write outside the mod directory. See commit `fix: prevent
+path traversal (zip-slip) in 7z/RAR extraction`. Further hardening (CSP, manifest
+asset paths) is tracked for future work.
+
+The code is validated on a recurring basis, not once. Each change runs through the
+loop in [`docs/TESTING.md`](docs/TESTING.md):
+
+- **Static analysis.** Self-hosted SonarQube scans the code. The quality gate
+  covers bugs, vulnerabilities, and security rating. Issues are fixed and the scan
+  repeats until the gate passes.
+- **Runtime evidence.** The packaged app is launched through WebDriver
+  (`tauri-driver`). A screenshot is captured each run:
+  [`docs/evidence/e2e-app-window.png`](docs/evidence/e2e-app-window.png).
+
+Latest run — values from [`docs/evidence/`](docs/evidence/), not claims:
+
+| Check | Result |
+| --- | --- |
+| SonarQube quality gate | ✅ Pass |
+| Vulnerabilities | 0 |
+| Security rating | A |
+| Bugs | 0 |
+| Rust unit tests | 11 passing |
+| App launches (E2E) | ✅ |
+
+The loop re-runs these on every change, so the table is reproduced from evidence.
 
 > ⚠️ Modding online games can carry risk with anti-cheat. Use at your own
 > discretion and purge mods before playing if unsure.
