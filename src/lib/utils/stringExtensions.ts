@@ -6,8 +6,13 @@ declare global {
 
 String.prototype.format = function (args): string {
     return this.replace(/\{(\w+)\}/g, (_, k) => {
-        if (Array.isArray(args)) return String(args[parseInt(k)]) ?? `{${k}}`;
-        return String(args[k]) ?? `{${k}}`;
+        const value = Array.isArray(args) ? args[parseInt(k)] : args[k];
+        if (value === undefined || value === null) return `{${k}}`;
+        if (typeof value === "string") return value;
+        if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+            return value.toString();
+        }
+        return JSON.stringify(value);
     });
 }
 

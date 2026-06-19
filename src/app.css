@@ -42,7 +42,7 @@
 }
 
 :root {
-    font-family: 'FS Sinclair';
+    font-family: 'FS Sinclair', sans-serif;
     -webkit-user-select: none;
     user-select: none;
     scrollbar-width: thin;
@@ -70,11 +70,11 @@
 }
 
 .font-sinclair {
-    font-family: 'FS Sinclair';
+    font-family: 'FS Sinclair', sans-serif;
 }
 
 .font-blockletter {
-    font-family: 'Blockletter';
+    font-family: 'Blockletter', sans-serif;
 }
 
 .hd2mm-button {
@@ -93,7 +93,7 @@
         disabled:bg-transparent
         disabled:border-zinc-700
     ;
-    font-family: 'Blockletter';
+    font-family: 'Blockletter', sans-serif;
 }
 
 .hd2mm-button-nop {
@@ -110,7 +110,7 @@
         disabled:bg-transparent
         disabled:border-zinc-700
     ;
-    font-family: 'Blockletter';
+    font-family: 'Blockletter', sans-serif;
 }
 
 .hd2mm-danger-button {
@@ -126,7 +126,7 @@
         active:bg-red-500
         active:border-red-500
     ;
-    font-family: 'Blockletter';
+    font-family: 'Blockletter', sans-serif;
 }
 
 .hd2mm-success-button {
@@ -142,7 +142,7 @@
         active:bg-green-500
         active:border-green-500
     ;
-    font-family: 'Blockletter';
+    font-family: 'Blockletter', sans-serif;
 }
 
 .hd2mm-input {
