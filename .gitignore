@@ -45,3 +45,7 @@ BASELINE.md
 docs/BASELINE.md
 MEMORY.md
 memory.md
+# SonarQube web UI screenshots expose the internal server project view; keep local only.
+docs/evidence/sonar-dashboard.png
+docs/evidence/sonar-issues.png
+docs/evidence/sonar-measures.png

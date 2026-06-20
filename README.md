@@ -164,13 +164,21 @@ utils) is covered; the Tauri command layer, UI, and bootstrap are exercised
 end-to-end instead (see [`sonar-project.properties`](sonar-project.properties)
 coverage exclusions).
 
-### SonarQube dashboard
+### SonarQube gate result
 
-Captured from the running SonarQube server.
+The text gate report is in [`docs/evidence/sonar-report.txt`](docs/evidence/sonar-report.txt):
 
-![SonarQube dashboard: quality gate Passed, 0 bugs, 0 vulnerabilities, 94% new-code coverage, security A](docs/evidence/sonar-dashboard.png)
+```
+Quality Gate : OK
+Bugs=0  Vulnerabilities=0  Code Smells=0  Security Hotspots=0
+Reliability=A  Security=A  Maintainability=A
+New-code coverage 94% (gate threshold 80%)
+```
 
-More: [measures](docs/evidence/sonar-measures.png) · [running app window](docs/evidence/e2e-app-window.png).
+The SonarQube web UI screenshots are kept locally and are not committed (they show
+the internal server's project view). Re-generate them with `scripts/sonar-evidence.sh`.
+
+More: [running app window](docs/evidence/e2e-app-window.png).
 
 ## Validation Reports
 

@@ -98,15 +98,14 @@ The loop:
 5. Re-scan.
 6. Repeat until the gate passes.
 
-Screenshots come from the SonarQube web UI itself:
+The text gate report is committed at `docs/evidence/sonar-report.txt`.
+
+The SonarQube web UI screenshots show the internal server's project view, so they
+are kept local and are not committed. Re-generate them on demand:
 
 ```bash
-scripts/sonar-evidence.sh
+scripts/sonar-evidence.sh   # writes sonar-dashboard/issues/measures.png locally
 ```
-
-- `docs/evidence/sonar-dashboard.png` — quality gate + ratings.
-- `docs/evidence/sonar-issues.png` — open issues.
-- `docs/evidence/sonar-measures.png` — measures.
 
 The loop in action (this fork):
 
@@ -140,9 +139,6 @@ All artifacts live in `docs/evidence/`.
 | `e2e-artifact.txt` | Packaged AppImage launched. |
 | `e2e-appimage-window.png` | The running window (AppImage). |
 | `sonar-report.txt` | Quality gate result (text). |
-| `sonar-dashboard.png` | Quality gate + ratings (SonarQube UI). |
-| `sonar-issues.png` | Open issues (SonarQube UI). |
-| `sonar-measures.png` | Measures (SonarQube UI). |
 
 Re-generate them by re-running each layer above.
 
