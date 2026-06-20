@@ -1,40 +1,3 @@
-warning: unused manifest key: target.x86_64-pc-windows-gnu.linker
-   Compiling hd2mm v2.0.0-preview3 (src-tauri)
-warning: unused import: `do_check_settings`
- --> src/commands/mod.rs:7:44
-  |
-7 | use crate::{AppState, commands::settings::{do_check_settings, do_load_settings, load_settings}, models::{manifest::Manifest, profile:...
-  |                                            ^^^^^^^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused variable: `manifest`
-   --> src/models/mod.rs:101:26
-    |
-101 |             Manifest::V2(manifest) => todo!()
-    |                          ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_manifest`
-    |
-    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused variable: `manifest`
-   --> src/commands/mod.rs:194:27
-    |
-194 |             (Manifest::V2(manifest), Config::V2 { selected, toggled, .. }) => {
-    |                           ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_manifest`
-
-warning: unused variable: `selected`
-   --> src/commands/mod.rs:194:51
-    |
-194 |             (Manifest::V2(manifest), Config::V2 { selected, toggled, .. }) => {
-    |                                                   ^^^^^^^^ help: try ignoring the field: `selected: _`
-
-warning: unused variable: `toggled`
-   --> src/commands/mod.rs:194:61
-    |
-194 |             (Manifest::V2(manifest), Config::V2 { selected, toggled, .. }) => {
-    |                                                             ^^^^^^^ help: try ignoring the field: `toggled: _`
-
-warning: method `zip` is never used
   --> src/commands/mods.rs:19:8
    |
 18 | trait ZipResult<S, E, T> {
@@ -44,28 +7,31 @@ warning: method `zip` is never used
    |
    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
 
-warning: `hd2mm` (lib test) generated 6 warnings (run `cargo fix --lib -p hd2mm --tests` to apply 5 suggestions)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.58s
-     Running unittests src/lib.rs (src-tauri/target/debug/deps/hd2mm_lib-2f7c4cf0249d44c5)
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/hd2mm_lib-088370235cb2d890)
 
-running 17 tests
+running 22 tests
 test archive::tests::allows_normal_relative_paths ... ok
 test archive::tests::rejects_traversal_and_absolute_paths ... ok
+test models::profile::tests::config_exposes_uuid_and_enabled ... ok
+test models::profile::tests::profile_accessors ... ok
 test models::settings::tests::check_empty_path ... ok
-test models::settings::tests::empty_path_fails ... ok
 test models::settings::tests::check_nonexistent_path ... ok
+test models::settings::tests::empty_path_fails ... ok
 test models::settings::tests::skip_entry_lookup ... ok
 test models::settings::tests::check_reports_multiple_missing ... ok
 test models::settings::tests::check_path_with_spaces_is_valid ... ok
+test utils::tests::keeps_already_correct_path ... ok
+test utils::tests::passes_through_missing_components ... ok
 test models::settings::tests::missing_path_fails ... ok
-test models::settings::tests::check_valid_path_has_no_errors ... ok
-test models::settings::tests::missing_tools_fails ... ok
-test models::settings::tests::missing_exe_fails ... ok
-test models::settings::tests::missing_data_fails ... ok
+test utils::tests::corrects_casing_to_match_disk ... ok
 test models::settings::tests::valid_install_passes ... ok
+test models::settings::tests::missing_data_fails ... ok
+test models::settings::tests::missing_exe_fails ... ok
+test models::settings::tests::missing_tools_fails ... ok
 test models::settings::tests::check_reports_each_missing_piece ... ok
+test models::settings::tests::check_valid_path_has_no_errors ... ok
 test commands::tests::rejects_non_patch_names ... ok
 test commands::tests::matches_valid_patch_names ... ok
 
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
